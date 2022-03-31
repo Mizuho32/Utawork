@@ -28,7 +28,7 @@ class Record:
 
     def __del__(self):
         print("Deconst")
-        if self.stream != None:
+        if self.stream is not None:
             self.disconnect()
 
     def sec2frame(self, second):
@@ -37,7 +37,8 @@ class Record:
         return frames, actual_range
 
     def connect(self):
-        self.p = pyaudio.PyAudio()
+        if self.p is None:
+            self.p = pyaudio.PyAudio()
         self.stream = self.p.open(
                 format=pyaudio.paInt16, channels=self.channels, rate=self.device_sample_rate, input=True,
                 frames_per_buffer=self.chunk_size, input_device_index=self.device_info["index"])
@@ -50,8 +51,12 @@ class Record:
         self.stream = None
         self.p = None
 
+    def reconnect(self):
+        self.disconnect()
+        self.connect()
+
     def record(self, frame_num):
-        if self.stream == None:
+        if self.stream is None:
             self.connect()
 
         self.frames = []
@@ -60,7 +65,8 @@ class Record:
             if self.torch_mode:
                 data = bytearray(data)
             # https://www.kaggle.com/general/213391
-            rawdata = (self.nt.frombuffer(data, dtype=self.nt.int16)/(4*2**15)).reshape(-1, self.channels).transpose(1, 0)
+            #rawdata = (self.nt.frombuffer(data, dtype=self.nt.int16)/(4*2**15)).reshape(-1, self.channels).transpose(1, 0)
+            rawdata = (self.nt.frombuffer(data, dtype=self.nt.int16)/(1*2**15)).reshape(-1, self.channels).transpose(1, 0)
             #print(self.nt, type(rawdata), type(frame))
             self.frames.append(self.sr_conv(rawdata))
 
