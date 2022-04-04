@@ -6,6 +6,8 @@
 /jupyter/
 /venv/
 *.txt
+*.pickle
+*.wav
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/ruby,jupyternotebooks,python
