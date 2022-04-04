@@ -302,48 +302,53 @@ class Recog:
             raise ValueError(f"duration({duration}) must be <= 5")
 
         concrete_result = Recog.estim_segment(self, onto, series, start, delta, int(np.ceil(duration/delta)), wav, sr, ontology, interests)
-        print(concrete_result,"\n")
+        #print(concrete_result)
 
         # judge
         prev_states = cur_states = [None]
         prev_interval = None
         judgement = State.Music | State.InProgress
         event_time = start
+        judges = {}
 
         union = lambda states: functools.reduce( lambda acc,x: acc|x, states, states[0])
+        scores = {st: 0 for st in [State.Music, State.Other, State.Talking]}
 
         for cur_interval, cur_states in utils.each_state(concrete_result): # time order
 
             cur_istart, cur_idurat = cur_interval
 
-            if not State.Music in cur_states and judgement == (State.Music | State.InProgress):
-                judgement = State.Other
 
-            #print(prev_states, cur_states)
+            for cur_state in cur_states:
+                if cur_state in scores:
+                    scores[cur_state] += 1
 
             if prev_states != [None]:
                 prev_istart, prev_idurat = prev_interval
 
                 if union(cur_states) != union(prev_states): # State change
-                    if State.Music in cur_states: # into music
+                    if State.Music in cur_states and not State.Music in prev_states: # into music
+                        judgement = State.Music | State.Start
+                        event_time = cur_istart
+                        judges[event_time] = judgement
 
-                        if State.Talking in prev_states and cur_idurat < aft_thres: # is Talking
-                            judgement = State.Talking
-                        else: # start Music
-                            judgement = State.Music | State.Start
-                            event_time = cur_istart
-
-                    elif State.Music in prev_states: # end music
+                    elif State.Music in prev_states and not State.Music in cur_states: # end music
                         judgement = State.Music | State.End
                         event_time = cur_istart
-
-                    else:
-                        judgement = State.Other | State.InProgress
+                        judges[event_time] = judgement
 
             prev_states = cur_states
             prev_interval = cur_interval
 
-        return judgement, event_time, concrete_result
+        if not judges:
+            judgement, _ = max(scores.items(), key=lambda st_score: st_score[1])
+            if judgement == State.Music:
+                judges[start] = State.Music|State.InProgress
+            else:
+                judges[start] = judgement
+
+        #print(judges)
+        return judges, concrete_result
 
 
     def detect_music(self, onto, series, start, delta, duration, wav, sr, ontology, interests,
@@ -354,8 +359,10 @@ class Recog:
         cur_time = start
 
         for i in range(10):
-            state, event_time, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
-            result[event_time] = state
+            judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            for event_time, state in judges.items():
+                result[event_time] = state
+
             concrete_result = {**c_result, **concrete_result}
             cur_time += min_interval
 
