@@ -1,6 +1,7 @@
 import json
-import re
+import re, sys
 import numpy as np
+from itertools import groupby
 
 def reg(expr, ignore=True):
     if ignore:
@@ -13,6 +14,40 @@ def dicnone(d,k,v=None):
         return d[k]
     except KeyError:
         return v
+
+# (from: https://stackoverflow.com/a/5878474/2885946)
+def each_cons(x, size):
+    return [x[i:i+size] for i in range(len(x)-size+1)]
+
+def flatten(ar):
+    return sum(ar, [])
+
+# interval_state = {(start, durat): [states...]}
+def each_state(interval_state):
+
+    starts = {t: list(itv) for t, itv in groupby(sorted(interval_state.keys(), key=lambda itv: itv[0]), key=lambda itv: itv[0])}
+    end_times = map(lambda itv: sum(itv), interval_state.keys())
+    times = list(sorted(set([*starts.keys(), *end_times])))
+
+    for cur, nxt in each_cons(times, 2):
+
+        covering_starts = list(filter(lambda t: t <= cur, starts.keys()))
+
+        if covering_starts:
+            cand = flatten(list(map(lambda t: starts[t], covering_starts)))
+            covering_itvs = list(filter(lambda itv: nxt <= sum(itv), cand))
+
+            cur_itv = (cur, nxt-cur)
+            states = flatten(list(map(lambda itv: interval_state[itv], covering_itvs)))
+            yield (cur_itv, states)
+
+
+def if_not_defined(level, name, val):
+    vars_ = vars(sys.modules[level])
+    if not name in vars_ or not vars_[name]:
+        return val
+    else:
+        return vars_[name]
 
 class Ontology:
 
