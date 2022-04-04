@@ -1,12 +1,15 @@
 import os, sys
-import csv
+import csv, re
 from enum import Flag, auto
+import functools
 
 import scipy
 import numpy as np
 import torchaudio
 import torch
 import matplotlib.cm as cm
+
+from . import utils
 
 class Recog:
 
@@ -112,6 +115,53 @@ class Recog:
         ax.set_yticks(np.arange(0, len(labels))+0.5)
         ax.set_yticklabels(labels)
 
+    @classmethod
+    def state_show(cls, labels, state_series, xstep=1, ax=None, title="", w=16, h=4):
+
+        label2yval = {state.value: i for i, state in enumerate(reversed(sorted(labels, key=lambda s: s.name)))}
+        colors = np.linspace(0, 100, len(labels))
+        #print(label2yval)
+
+        for segment, states in state_series.items():
+            for state in states:
+                yval = label2yval[state.value]
+                #print(segment, state, yval)
+                ax.broken_barh([segment], (yval, 1), facecolors=cm.jet(colors[yval]/100))
+
+        ax.set_title(title)
+
+        ax.set_xlabel('Time')
+        start, end = ax.get_xlim()
+        ax.xaxis.set_ticks(np.arange(start, end, xstep))
+
+        ax.set_yticks(np.arange(0, len(labels))+0.5)
+        ax.set_yticklabels(list(reversed(sorted(map(lambda l: l.name, labels)))))
+
+    @classmethod
+    def detect_show(cls, detect_series, xstep=1, ax=None, title="", w=16, h=4):
+
+        labels = [State.Music|State.Start, State.Music|State.InProgress, State.Music|State.End, State.Talking, State.Other]
+
+        print(labels)
+
+        sorted_labels = list(reversed(sorted(labels, key=lambda s: s.value)))
+        label2yval = {state.value: i for i, state in enumerate(sorted_labels)}
+        colors = np.linspace(0, 100, len(labels))
+
+        for event_time, state in detect_series.items():
+            yval = label2yval[state.value]
+            ax.broken_barh([(event_time, 0.5)], (yval, 1), facecolors=cm.jet(colors[yval]/100))
+
+        ax.set_title(title)
+
+        ax.set_xlabel('Time')
+        start, end = ax.get_xlim()
+        ax.xaxis.set_ticks(np.arange(start, end, xstep))
+
+        ax.set_yticks(np.arange(0, len(labels))+0.5)
+        ax.set_yticklabels(list(map(lambda l: str(l) ,sorted_labels)))
+
+
 
     @classmethod
     def fbank(cls, y, sr, target_length, mel_bins=128, frame_shift=10, repeat=False):
@@ -145,6 +195,7 @@ class Recog:
 
     def abst_infer(self, wav, sr, ontology, interests, target_length=1024, mel_bins=128, frame_shift=10, repeat=False):
 
+        #print(wav.shape, sr, target_length, mel_bins, frame_shift, repeat)
         fbank_orig = Recog.fbank(wav, sr, target_length, mel_bins=mel_bins, frame_shift=frame_shift, repeat=repeat)
 
         tensor = fbank_orig.expand(1, target_length, mel_bins)           # reshape the feature
@@ -160,7 +211,7 @@ class Recog:
         return abst_scores, conc_scores, result
 
     # search cache. count can be negative value
-    def cache(self, series, start, delta, count):
+    def cache(self, series, start, delta, count, wav, sr, ontology, interests):
 
         sign = np.sign(count)
 
@@ -171,98 +222,147 @@ class Recog:
             try:
                 result[k] = series[k]
             except KeyError:
-                raise NotImplementedError()
-                #series[k] =
+                wav_cut = wav[:, int(sr*cur):int(sr*(cur+delta))]
+                if wav_cut.shape[1] > 0:
+                    series[k] = Recog.abst_infer(self, wav_cut, sr, ontology, interests)
+                    result[k] = series[k]
+
         return result
 
     @classmethod
-    def is_music(cls, infresult, music_thres, hs_thres, music_ids, hs_id):
+    def categorize(cls, infresult, music_thres, hs_thres, music_ids, hs_id):
 
         music = any(map(lambda ident: infresult[ident] >= music_thres, music_ids))
         human_sound = infresult[hs_id] >= hs_thres
+        states = []
 
+        if human_sound:
+            states.append( State.Talking )
         if music:
-            if human_sound:
-                return State.Talking
-            else:
-                return State.Music
-        else:
-            return State.Other
+            states.append( State.Music )
+        if not human_sound and not music:
+            states.append( State.Other )
 
-    def estim_segment(self, onto, series, start, delta, count, music_thres = 35, hs_thres = 35):
+        return states
+
+    # do inference and combine the same value state sequence
+    def estim_segment(self, onto, series, start, delta, count, wav, sr, ontology, interests, music_thres = 35, hs_thres = 35):
 
         music_ids = list(map(lambda o: o["id"], onto["^(Music|Singing)$"]))
         hs_id = onto["^Human sounds$"][0]["id"]
 
-        segment = Recog.cache(self, series, start, delta, count)
-        prev_state = cur_state = None
-        cur_interval = None
-        result = {}
+        labels = [State.Music, State.Talking, State.Other]
+
+        segment = Recog.cache(self, series, start, delta, count, wav, sr, ontology, interests)
+        bag = {label: {"prev_state": False, "cur_state": False, "cur_interval": None, "result": []} for label in labels}
 
         # combine intervals
         for interval in sorted(segment.keys(), key=lambda i: i[0]): # sort by starttime
-            abst_result = segment[interval][0]
-            cur_state = Recog.is_music(abst_result, music_thres, hs_thres, music_ids, hs_id)
 
-            if cur_state != prev_state:
-                if cur_interval is not None:
-                    result[tuple(cur_interval)] = prev_state
+            abst_result = segment[interval][0] # (abst, conc, rawdata)
+            cur_states = Recog.categorize(abst_result, music_thres, hs_thres, music_ids, hs_id)
 
-                prev_state = cur_state
-                cur_interval = list(interval)
-            else:
-                cur_interval[1] += interval[1]
+            for label in labels:
+                bag[label]["cur_state"] = label in cur_states
+                cur_state, prev_state = bag[label]["cur_state"], bag[label]["prev_state"]
+                cur_interval = bag[label]["cur_interval"]
 
-        result[tuple(cur_interval)] = cur_state
+                if cur_state != prev_state:
+                    if cur_state:  # if label is true, register cur_interval
+                        bag[label]["cur_interval"] = list(interval)
+                    else:
+                        bag[label]["result"].append( tuple(cur_interval) )
+                        bag[label]["cur_interval"] = None
+                else:
+                    if cur_state:
+                        bag[label]["cur_interval"][1] += interval[1] # extend duration
+
+                bag[label]["prev_state"] = cur_state
+
+        for label in labels:
+            ci = bag[label]["cur_interval"]
+            if ci is not None:
+                bag[label]["result"].append(tuple(ci))
+
+
+        result = {}
+        for label, v in bag.items():
+            for itv in v["result"]:
+                try:
+                    result[itv].append(label)
+                except KeyError:
+                    result[itv] = [label]
 
         return result
 
-    #                                                             length of BGM after talking ended
-    def judge_segment(self, onto, series, start, delta, duration, aft_thres=3):
+
+    # aft_thres: length of BGM after talking ended
+    def judge_segment(self, onto, series, start, delta, duration, wav, sr, ontology, interests, aft_thres=3):
         if duration > 5:
             raise ValueError(f"duration({duration}) must be <= 5")
 
-        concrete_result = Recog.estim_segment(self, onto, series, start, delta, int(np.ceil(duration/delta)))
-        print(concrete_result)
+        concrete_result = Recog.estim_segment(self, onto, series, start, delta, int(np.ceil(duration/delta)), wav, sr, ontology, interests)
+        print(concrete_result,"\n")
 
         # judge
-        prev_state = cur_state = None
+        prev_states = cur_states = [None]
         prev_interval = None
         judgement = State.Music | State.InProgress
         event_time = start
-        for cur_interval in sorted(concrete_result.keys(), key=lambda i: i[0]): # sort by starttime
 
-            cur_state = concrete_result[cur_interval]
+        union = lambda states: functools.reduce( lambda acc,x: acc|x, states, states[0])
+
+        for cur_interval, cur_states in utils.each_state(concrete_result): # time order
+
             cur_istart, cur_idurat = cur_interval
 
-            if cur_state != State.Music and judgement == State.Music | State.InProgress:
+            if not State.Music in cur_states and judgement == (State.Music | State.InProgress):
                 judgement = State.Other
 
-            #print(prev_state, cur_state)
+            #print(prev_states, cur_states)
 
-            if prev_state is not None:
+            if prev_states != [None]:
                 prev_istart, prev_idurat = prev_interval
 
-                if cur_state != prev_state: # State change
-                    if cur_state == State.Music: # into music
+                if union(cur_states) != union(prev_states): # State change
+                    if State.Music in cur_states: # into music
 
-                        if prev_state == State.Talking and cur_idurat < aft_thres: # is Talking
+                        if State.Talking in prev_states and cur_idurat < aft_thres: # is Talking
                             judgement = State.Talking
                         else: # start Music
                             judgement = State.Music | State.Start
                             event_time = cur_istart
 
-                    elif prev_state == State.Music: # end music
+                    elif State.Music in prev_states: # end music
                         judgement = State.Music | State.End
                         event_time = cur_istart
 
                     else:
                         judgement = State.Other | State.InProgress
 
-            prev_state = cur_state
+            prev_states = cur_states
             prev_interval = cur_interval
 
-        return judgement, event_time
+        return judgement, event_time, concrete_result
+
+
+    def detect_music(self, onto, series, start, delta, duration, wav, sr, ontology, interests,
+            min_interval=5):
+
+        result = {}
+        concrete_result = {}
+        cur_time = start
+
+        for i in range(10):
+            state, event_time, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            result[event_time] = state
+            concrete_result = {**c_result, **concrete_result}
+            cur_time += min_interval
+
+        return result, concrete_result
+
+
+
 
 
 
