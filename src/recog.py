@@ -350,23 +350,138 @@ class Recog:
         #print(judges)
         return judges, concrete_result
 
+    @classmethod
+    def judges_denoised(cls, judges, concrete_result, thres):
+
+        denoised = {k: v for k,v in judges.items()}
+        musics_sorted = filter(lambda t_s: State.Music in t_s[1], sorted(judges.items(), key=lambda t_s: t_s[0]))
+        cons = utils.each_cons(list(musics_sorted), 2)
+
+        for prev, cur in cons:
+            prev_event_time, prev_state = prev
+            cur_event_time, cur_state = cur
+
+            if cur_event_time - prev_event_time <= thres:
+                if State.End in prev_state and State.Start in cur_state or \
+                   State.Start in prev_state and State.End  in cur_state:
+                    denoised.pop(prev_event_time)
+                    denoised.pop(cur_event_time)
+
+            if not denoised:
+                # calc biggest
+                b = {}
+                for itv, states in concrete_result.items():
+                    for state in states:
+                        if state in b:
+                            b[state][1] += itv[1]
+                            if b[state][0] > itv[0]:
+                                b[state][0] = itv[0]
+                        else:
+                            b[state] = list(itv)
+
+                # sort by state who has biggest time duration
+                biggest, itv = sorted(b.items(), key=lambda s_itv: s_itv[1][1] )[-1]
+
+                if biggest == State.Music:
+                    biggest = biggest|State.InProgress
+                denoised[itv[0]] = biggest
+
+
+
+        return denoised
+
 
     def detect_music(self, onto, series, start, delta, duration, wav, sr, ontology, interests,
-            min_interval=5):
+            music_length=4*60, music_check_len=20, thres=1.0,
+            min_interval=5, big_interval=15):
 
-        result = {}
+        result, result_d = {}, {}
         concrete_result = {}
         cur_time = start
+        prev_judge = None
+        interval_plan = []
 
-        for i in range(10):
-            judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+        def add_(result, judges):
             for event_time, state in judges.items():
                 result[event_time] = state
 
-            concrete_result = {**c_result, **concrete_result}
-            cur_time += min_interval
+        for i in range(10):
+            judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            print(judges)
+            judges_d = Recog.judges_denoised(judges, c_result, thres)
+            judgess, c_results = [judges], [c_result]
 
-        return result, concrete_result
+            cur_judge = judges_d[max(judges_d.keys())]
+
+            if prev_judge != None:
+                if not State.Music in prev_judge and State.Music in cur_judge:
+                    if State.Start in cur_judge: # music start
+                        is_starting, next_cur_time, judgess, c_results = \
+                            Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
+
+                        if is_starting:
+                            tmp = Recog.judges_denoised(judgess[-1], c_results[-1], thres)
+                            cur_judge = tmp[max(tmp.keys())]
+                            interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
+
+                    else: # next is music InPro or End
+                        raise NotImplementedError()
+
+            for judges in judgess:
+                add_(result, judges)
+            for c_result in c_results:
+                concrete_result = {**c_result, **concrete_result}
+            add_(result_d, judges_d)
+
+            if interval_plan:
+                cur_time += interval_plan.pop()
+            else:
+                cur_time += min_interval
+
+            prev_judge = cur_judge
+
+        return result, result_d, concrete_result
+
+    # mcl: music check length [sec]
+    def is_music_starting(self, series, start, delta, duration, mcl, interval, wav, sr, ontology, interests, thres = 1.0):
+
+        count = int(mcl // interval)
+        c_results = []
+        judgess = []
+        cur_time = start
+
+        music_starting = True
+
+        for i in range(count):
+            judges, c_result = Recog.judge_segment(self, ontology, series, cur_time, delta, duration, wav, sr, ontology, interests)
+
+            c_results.append(c_result)
+            judgess  .append(judges)
+
+            # denoise and check music ends?
+            judges_d = Recog.judges_denoised(judges, c_result, thres)
+            if any(map(lambda etime_st: State.Music|State.End == etime_st[1], judges_d.items())):
+                music_starting = False
+
+            cur_time += interval
+
+        last_time = min(map(lambda start_itv: start_itv[0], c_results[-1].keys())) # start time of last segment
+        return music_starting, last_time, judgess, c_results
+
+    @classmethod
+    def interval_plan(cls, music_len, big_interval, min_interval):
+        big_count = music_len // big_interval
+        min_count = (music_len-big_interval*big_count) // min_interval
+
+        return [*[min_interval]*min_count, *[big_interval]*big_count]
+
+
+
+
+
+
+
+
 
 
 
