@@ -56,15 +56,15 @@ class Recog:
         return np.array(labels), np.array(ids)
 
     @classmethod
-    def waveplot(cls, plt, librosa, y, sr, ax=None, w=16, h=4):
+    def waveplot(cls, plt, librosa, y, sr, offset=0.0, ax=None, w=16, h=4):
         if type(y) == torch.Tensor:
             y = y.to('cpu').detach().numpy().copy()
 
         if ax is None:
             plt.figure(figsize=(w, h))
-            librosa.display.waveplot(y=y, sr=sr)
+            librosa.display.waveplot(y=y, sr=sr, offset=offset)
         else:
-            librosa.display.waveplot(y=y, sr=sr, ax=ax)
+            librosa.display.waveplot(y=y, sr=sr, ax=ax, offset=offset)
 
     @classmethod
     def specshow(cls, plt, librosa, fbank, sr, hop_length, cb=True, ax=None, title="", w=16, h=4):
@@ -127,6 +127,9 @@ class Recog:
                 yval = label2yval[state.value]
                 #print(segment, state, yval)
                 ax.broken_barh([segment], (yval, 1), facecolors=cm.jet(colors[yval]/100))
+
+                ax.text(segment[0], yval+0.4, "<", color="white")
+                ax.text(sum(segment)-0.5, yval+0.4, ">", color="white")
 
         ax.set_title(title)
 
@@ -245,8 +248,9 @@ class Recog:
 
         return states
 
+    # FIXME: compare sesgment? for the case of realtively high score, thres fixneeded
     # do inference and combine the same value state sequence
-    def estim_segment(self, onto, series, start, delta, count, wav, sr, ontology, interests, music_thres = 35, hs_thres = 35):
+    def estim_segment(self, onto, series, start, delta, count, wav, sr, ontology, interests, music_thres = 30, hs_thres = 30):
 
         music_ids = list(map(lambda o: o["id"], onto["^(Music|Singing)$"]))
         hs_id = onto["^Human sounds$"][0]["id"]
@@ -321,7 +325,7 @@ class Recog:
 
             for cur_state in cur_states:
                 if cur_state in scores:
-                    scores[cur_state] += 1
+                    scores[cur_state] += cur_idurat
 
             if prev_states != [None]:
                 prev_istart, prev_idurat = prev_interval
@@ -347,7 +351,6 @@ class Recog:
             else:
                 judges[start] = judgement
 
-        #print(judges)
         return judges, concrete_result
 
     @classmethod
@@ -361,6 +364,7 @@ class Recog:
             prev_event_time, prev_state = prev
             cur_event_time, cur_state = cur
 
+            # remove very short (music or non music)
             if cur_event_time - prev_event_time <= thres:
                 if State.End in prev_state and State.Start in cur_state or \
                    State.Start in prev_state and State.End  in cur_state:
@@ -386,8 +390,6 @@ class Recog:
                     biggest = biggest|State.InProgress
                 denoised[itv[0]] = biggest
 
-
-
         return denoised
 
 
@@ -399,33 +401,60 @@ class Recog:
         concrete_result = {}
         cur_time = start
         prev_judge = None
+        prev_c_results = None
         interval_plan = []
+        detect_back_target = None
 
         def add_(result, judges):
             for event_time, state in judges.items():
                 result[event_time] = state
 
+        def last_cur_time(prev_c_results): # FIXME: LINQ
+            min_times = map(lambda cr: min(map(lambda itv:itv[0], cr.keys())), prev_c_results)
+            return max(min_times)
+
         for i in range(10):
-            judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            try:
+                judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            except IndexError:
+                break
+
             print(judges)
             judges_d = Recog.judges_denoised(judges, c_result, thres)
-            judgess, c_results = [judges], [c_result]
-
             cur_judge = judges_d[max(judges_d.keys())]
 
+            judgess, c_results = [judges], [c_result]
+
+
             if prev_judge != None:
-                if not State.Music in prev_judge and State.Music in cur_judge:
+                if not State.Music in prev_judge and State.Music in cur_judge: # non Music -> Music
                     if State.Start in cur_judge: # music start
                         is_starting, next_cur_time, judgess, c_results = \
                             Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
 
                         if is_starting:
-                            tmp = Recog.judges_denoised(judgess[-1], c_results[-1], thres)
-                            cur_judge = tmp[max(tmp.keys())]
+                            #tmp = Recog.judges_denoised(judgess[-1], c_results[-1], thres)
+                            #cur_judge = tmp[max(tmp.keys())]
                             interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
+                    else: # next is music InPro or End, without Starting
+                        detect_back_target = State.Music|State.Start
 
-                    else: # next is music InPro or End
-                        raise NotImplementedError()
+                elif State.Music in prev_judge and not State.Music in cur_judge: # Music -> non Music
+                    if not State.End in prev_judge: # music end not detected
+                        detect_back_target = State.Music|State.End
+
+                if detect_back_target != None:
+                    detected_judge, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
+                    judgess, c_results = [*judgess, *tmp_j], [*c_results, *tmp_c]
+
+                    if detected_judge != None:
+                        add_(result_d, judges_d)
+                        judges_d = detected_judge
+                    else:
+                        print(f"Failed to find {detect_back_target} (at {cur_time})")
+
+                    detect_back_target = None
+
 
             for judges in judgess:
                 add_(result, judges)
@@ -439,6 +468,7 @@ class Recog:
                 cur_time += min_interval
 
             prev_judge = cur_judge
+            prev_c_results = c_results
 
         return result, result_d, concrete_result
 
@@ -467,6 +497,41 @@ class Recog:
 
         last_time = min(map(lambda start_itv: start_itv[0], c_results[-1].keys())) # start time of last segment
         return music_starting, last_time, judgess, c_results
+
+    # start: future,  end: past
+    def back_to_change(self, target, series, start, delta, duration, end, wav, sr, ontology, interests, thres = 1.0):
+        length = start - (end+duration)
+        count = int(length // duration)
+
+        # overwrapping intervals
+        itvs = [(start-duration*(i+2) -delta, duration +delta) for i in range(count-2)] # middle itvs
+        itvs.insert(0, (start-duration -delta, duration +2*delta))
+        rest_delta = length - duration*count  +delta
+        itvs.append( tuple(map(lambda i: utils.round(i, 1), (start-length -delta, duration+rest_delta))) )
+
+        c_results = []
+        judgess = []
+        print(itvs)
+
+        # search even -> odd, 1delta overwrap
+        for j in range(2):
+            for i in map(lambda i: i*2, range(int(len(itvs)/2+1))):
+                try:
+                    time, duration = itvs[j+i]
+                    judges, c_result = Recog.judge_segment(self, ontology, series, time, delta, duration, wav, sr, ontology, interests)
+                    c_results.append(c_result)
+                    judgess  .append(judges)
+
+                    judges_d = Recog.judges_denoised(judges, c_result, thres)
+                    if any(map(lambda etime_st: target == etime_st[1], judges_d.items())):
+                        return judges_d, judgess, c_results
+
+                except IndexError:
+                    break
+
+        return None, judgess, c_results
+
+
 
     @classmethod
     def interval_plan(cls, music_len, big_interval, min_interval):
