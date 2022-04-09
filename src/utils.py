@@ -15,6 +15,11 @@ def dicnone(d,k,v=None):
     except KeyError:
         return v
 
+# https://note.nkmk.me/python-round-decimal-quantize/
+def round(val, digit=0):
+    p = 10 ** digit
+    return (val * p * 2 + 1) // 2 / p
+
 # (from: https://stackoverflow.com/a/5878474/2885946)
 def each_cons(x, size):
     return [x[i:i+size] for i in range(len(x)-size+1)]
