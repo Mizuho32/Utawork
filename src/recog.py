@@ -15,6 +15,7 @@ class Recog:
 
     def __init__(self, ASTModel, input_tdim, label_path, pth_name="audioset_10_10_0.4593.pth"):
         self.labels, self.ids = self.load_label(label_path)
+        self.wav_offset = 0
 
         ast_mdl = ASTModel(label_dim=527, input_tdim=input_tdim, imagenet_pretrain=False, audioset_pretrain=False)
 
@@ -215,6 +216,15 @@ class Recog:
 
         return abst_scores, conc_scores, result
 
+    def slice_wav(self, wav, sr, start, end):
+        slice_start = int(sr*(start - self.wav_offset))
+        slice_end   = int(sr*(end   - self.wav_offset))
+
+        if slice_start < 0 and slice_end > wav.shape[1]:
+            raise IndexError(f"Invalid slice {slice_start}:{slice_end} for {wav.shape}")
+
+        return wav[:, slice_start:slice_end]
+
     # search cache. count can be negative value
     def cache(self, series, start, delta, count, wav, sr, ontology, interests):
 
@@ -227,10 +237,9 @@ class Recog:
             try:
                 result[k] = series[k]
             except KeyError:
-                wav_cut = wav[:, int(sr*cur):int(sr*(cur+delta))]
-                if wav_cut.shape[1] > 0:
-                    series[k] = Recog.abst_infer(self, wav_cut, sr, ontology, interests)
-                    result[k] = series[k]
+                wav_cut = Recog.slice_wav(self, wav, sr, cur, cur+delta)
+                series[k] = Recog.abst_infer(self, wav_cut, sr, ontology, interests)
+                result[k] = series[k]
 
         return result
 
@@ -400,10 +409,11 @@ class Recog:
         return denoised
 
 
-    def detect_music(self, onto, series, start, delta, duration, wav, sr, ontology, interests,
+    def detect_music(self, onto, series, start, delta, duration, wav_offset, wav, sr, ontology, interests,
             music_length=4*60, music_check_len=20, thres=1.0,
             min_interval=5, big_interval=15, stop=np.infty):
 
+        self.wav_offset = wav_offset
         entire_abs_mean = np.abs(wav).mean()
 
         result, result_d = {}, {}
@@ -425,15 +435,16 @@ class Recog:
 
         wav_len = wav.shape[1]
 
-        while cur_time < stop and sr*(cur_time+duration) < wav_len:
+        while cur_time < stop and sr*(cur_time+duration - wav_offset) < wav_len:
             judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
-            cur_abs_mean = np.abs(wav[:, int(sr*cur_time):int(sr*(cur_time+duration))]).mean()
+            cur_abs_mean = np.abs(Recog.slice_wav(self, wav, sr, cur_time, cur_time+duration)).mean()
+
 
             print(judges)
             judges_d = Recog.judges_denoised(judges, c_result, thres)
             cur_judge = judges_d[max(judges_d.keys())] # get most recent State
 
-            judgess, c_results = [judges], [c_result]
+            judgess, c_results, judgess_d = [judges], [c_result], [judges_d]
 
 
             if prev_judge != None:
@@ -463,10 +474,8 @@ class Recog:
 
                 if detect_back_target != None:
                     detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
-                    judgess, c_results = [*judgess, *tmp_j], [*c_results, *tmp_c]
-
-                    for j_d in d_js:
-                        add_(result_d, j_d)
+                    # FIXME?: should expire old judges?
+                    judgess, c_results, judgess_d = [*judgess, *tmp_j], [*c_results, *tmp_c], [*judgess_d, *d_js]
                     if detected_judge == None:
                         print(f"Failed to find {detect_back_target} (at {cur_time})")
 
@@ -478,7 +487,8 @@ class Recog:
                 add_(result, judges)
             for c_result in c_results:
                 concrete_result = {**c_result, **concrete_result}
-            add_(result_d, judges_d)
+            for judges_d in judgess_d:
+                add_(result_d, judges_d)
 
             if interval_plan:
                 cur_time += interval_plan.pop()
@@ -542,6 +552,7 @@ class Recog:
                     c_results.append(c_result)
                     judgess  .append(judges)
                     judgess_d.append( Recog.judges_denoised(judges, c_result, thres) )
+                    #print(c_result, judges, judgess_d[-1])
 
                     if any(map(lambda etime_st: target == etime_st[1], judgess_d[-1].items())):
                         return judgess_d[-1], judgess_d, judgess, c_results
