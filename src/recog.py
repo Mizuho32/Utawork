@@ -374,7 +374,9 @@ class Recog:
             if not denoised:
                 # calc biggest
                 b = {}
+                times = []
                 for itv, states in concrete_result.items():
+                    times = [*times, itv[0], sum(itv)]
                     for state in states:
                         if state in b:
                             b[state][1] += itv[1]
@@ -384,11 +386,18 @@ class Recog:
                             b[state] = list(itv)
 
                 # sort by state who has biggest time duration
-                biggest, itv = sorted(b.items(), key=lambda s_itv: s_itv[1][1] )[-1]
+                leng = max(times)-min(times)
+                #FIXME: LINQ
+                biggests = list(map(lambda s_itv: s_itv[0],
+                    sorted(filter(lambda s_itv: s_itv[1][1]/leng > 0.5, b.items()), key=lambda s_itv: s_itv[1][1]) ))
+                #biggests, itv = sorted(b.items(), key=lambda s_itv: s_itv[1][1] )[-1]
 
-                if biggest == State.Music:
-                    biggest = biggest|State.InProgress
-                denoised[itv[0]] = biggest
+                if State.Music in biggests:
+                    biggest = State.Music|State.InProgress
+                else:
+                    biggest = biggests[-1]
+                #denoised[itv[0]] = biggest
+                denoised[min(times)] = biggest
 
         return denoised
 
