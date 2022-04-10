@@ -402,11 +402,14 @@ class Recog:
             music_length=4*60, music_check_len=20, thres=1.0,
             min_interval=5, big_interval=15, stop=np.infty):
 
+        entire_abs_mean = np.abs(wav).mean()
+
         result, result_d = {}, {}
         concrete_result = {}
         cur_time = start
         prev_judge = None
         prev_c_results = None
+        prev_abs_mean = 0
         interval_plan = []
         detect_back_target = None
 
@@ -422,10 +425,11 @@ class Recog:
 
         while cur_time < stop and sr*(cur_time+duration) < wav_len:
             judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            cur_abs_mean = np.abs(wav[:, int(sr*cur_time):int(sr*(cur_time+duration))]).mean()
 
             print(judges)
             judges_d = Recog.judges_denoised(judges, c_result, thres)
-            cur_judge = judges_d[max(judges_d.keys())]
+            cur_judge = judges_d[max(judges_d.keys())] # get most recent State
 
             judgess, c_results = [judges], [c_result]
 
@@ -448,16 +452,22 @@ class Recog:
                 elif State.Music in prev_judge and State.Music in cur_judge: # Music -> Music
                     if State.End in prev_judge and State.InProgress in cur_judge: # music not start but music (END->InPro)
                         detect_back_target = State.Music|State.Start
+                    elif State.InProgress in prev_judge and State.InProgress in cur_judge: # InProgress but
+                        # music looks changing? e.g. BGM -> singing and interval plan in progress
+                        # FIXME: very naive judgement
+                        if (prev_abs_mean > entire_abs_mean) != (cur_abs_mean > entire_abs_mean) and interval_plan:
+                            detect_back_target = State.Music|State.End
+
 
                 if detect_back_target != None:
-                    detected_judge, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
+                    detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
                     judgess, c_results = [*judgess, *tmp_j], [*c_results, *tmp_c]
 
-                    if detected_judge != None:
-                        add_(result_d, judges_d)
-                        judges_d = detected_judge
-                    else:
+                    for j_d in d_js:
+                        add_(result_d, j_d)
+                    if detected_judge == None:
                         print(f"Failed to find {detect_back_target} (at {cur_time})")
+
                     interval_plan = [] # FIXME? only for Music END?
                     detect_back_target = None
 
@@ -475,6 +485,7 @@ class Recog:
 
             prev_judge = cur_judge
             prev_c_results = c_results
+            prev_abs_mean = cur_abs_mean
 
         return result, result_d, concrete_result
 
@@ -517,7 +528,8 @@ class Recog:
 
         c_results = []
         judgess = []
-        print(itvs)
+        judgess_d = []
+        #print("back: ", target)
 
         # search even -> odd, 1delta overwrap
         for j in range(2):
@@ -527,15 +539,15 @@ class Recog:
                     judges, c_result = Recog.judge_segment(self, ontology, series, time, delta, duration, wav, sr, ontology, interests)
                     c_results.append(c_result)
                     judgess  .append(judges)
+                    judgess_d.append( Recog.judges_denoised(judges, c_result, thres) )
 
-                    judges_d = Recog.judges_denoised(judges, c_result, thres)
-                    if any(map(lambda etime_st: target == etime_st[1], judges_d.items())):
-                        return judges_d, judgess, c_results
+                    if any(map(lambda etime_st: target == etime_st[1], judgess_d[-1].items())):
+                        return judgess_d[-1], judgess_d, judgess, c_results
 
                 except IndexError:
                     break
 
-        return None, judgess, c_results
+        return None, judgess_d, judgess, c_results
 
 
 
