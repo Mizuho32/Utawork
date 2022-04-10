@@ -437,8 +437,6 @@ class Recog:
                             Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
 
                         if is_starting:
-                            #tmp = Recog.judges_denoised(judgess[-1], c_results[-1], thres)
-                            #cur_judge = tmp[max(tmp.keys())]
                             interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
                     else: # next is music InPro or End, without Starting
                         detect_back_target = State.Music|State.Start
