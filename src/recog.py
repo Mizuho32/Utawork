@@ -56,15 +56,19 @@ class Recog:
         return np.array(labels), np.array(ids)
 
     @classmethod
-    def waveplot(cls, plt, librosa, y, sr, offset=0.0, ax=None, w=16, h=4):
+    def waveplot(cls, plt, librosa, y, sr, offset=0.0, max_sr=100, ax=None, w=16, h=4):
+
+        if max_sr > 100:
+            max_sr = 100
+
         if type(y) == torch.Tensor:
             y = y.to('cpu').detach().numpy().copy()
 
         if ax is None:
             plt.figure(figsize=(w, h))
-            librosa.display.waveplot(y=y, sr=sr, offset=offset)
+            librosa.display.waveplot(y=y, sr=sr, offset=offset, max_sr=max_sr)
         else:
-            librosa.display.waveplot(y=y, sr=sr, ax=ax, offset=offset)
+            librosa.display.waveplot(y=y, sr=sr, ax=ax, offset=offset, max_sr=max_sr)
 
     @classmethod
     def specshow(cls, plt, librosa, fbank, sr, hop_length, cb=True, ax=None, title="", w=16, h=4):
