@@ -149,8 +149,6 @@ class Recog:
 
         labels = [State.Music|State.Start, State.Music|State.InProgress, State.Music|State.End, State.Talking, State.Other]
 
-        print(labels)
-
         sorted_labels = list(reversed(sorted(labels, key=lambda s: s.value)))
         label2yval = {state.value: i for i, state in enumerate(sorted_labels)}
         colors = np.linspace(0, 100, len(labels))
