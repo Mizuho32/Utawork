@@ -385,7 +385,7 @@ class Recog:
 
                 # filter, sort by state who has biggests time duration
                 leng = max(times)-min(times)
-                #FIXME: LINQ
+                #FIXME: LINQ, 0.5 thres
                 biggests = list(map(lambda s_dur: s_dur[0],
                     sorted(filter(lambda s_dur: s_dur[1]/leng > 0.5, b.items()), key=lambda s_dur: s_dur[1]) ))
 
@@ -400,7 +400,7 @@ class Recog:
 
     def detect_music(self, onto, series, start, delta, duration, wav, sr, ontology, interests,
             music_length=4*60, music_check_len=20, thres=1.0,
-            min_interval=5, big_interval=15):
+            min_interval=5, big_interval=15, stop=np.infty):
 
         result, result_d = {}, {}
         concrete_result = {}
@@ -418,11 +418,10 @@ class Recog:
             min_times = map(lambda cr: min(map(lambda itv:itv[0], cr.keys())), prev_c_results)
             return max(min_times)
 
-        for i in range(10):
-            try:
-                judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
-            except IndexError:
-                break
+        wav_len = wav.shape[1]
+
+        while cur_time < stop and sr*(cur_time+duration) < wav_len:
+            judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
 
             print(judges)
             judges_d = Recog.judges_denoised(judges, c_result, thres)
@@ -448,6 +447,10 @@ class Recog:
                     if not State.End in prev_judge: # music end not detected
                         detect_back_target = State.Music|State.End
 
+                elif State.Music in prev_judge and State.Music in cur_judge: # Music -> Music
+                    if State.End in prev_judge and State.InProgress in cur_judge: # music not start but music (END->InPro)
+                        detect_back_target = State.Music|State.Start
+
                 if detect_back_target != None:
                     detected_judge, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
                     judgess, c_results = [*judgess, *tmp_j], [*c_results, *tmp_c]
@@ -457,7 +460,7 @@ class Recog:
                         judges_d = detected_judge
                     else:
                         print(f"Failed to find {detect_back_target} (at {cur_time})")
-
+                    interval_plan = [] # FIXME? only for Music END?
                     detect_back_target = None
 
 
@@ -540,8 +543,8 @@ class Recog:
 
     @classmethod
     def interval_plan(cls, music_len, big_interval, min_interval):
-        big_count = music_len // big_interval
-        min_count = (music_len-big_interval*big_count) // min_interval
+        big_count = int(music_len // big_interval)
+        min_count = int((music_len-big_interval*big_count) // min_interval)
 
         return [*[min_interval]*min_count, *[big_interval]*big_count]
 
