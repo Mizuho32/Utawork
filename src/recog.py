@@ -408,30 +408,37 @@ class Recog:
 
         return denoised
 
+    @classmethod
+    def last_cur_time(cls, prev_c_results): # FIXME: LINQ
+        min_times = map(lambda cr: min(map(lambda itv:itv[0], cr.keys())), prev_c_results)
+        return max(min_times)
+
 
     def detect_music(self, onto, series, start, delta, duration, wav_offset, wav, sr, ontology, interests,
             music_length=4*60, music_check_len=20, thres=1.0,
-            min_interval=5, big_interval=15, stop=np.infty):
+            min_interval=5, big_interval=15, stop=np.infty,
+
+            result = {}, result_d = {}, concrete_result = {},
+            cur_time = None,
+            prev_judge = None, prev_c_results= None,
+            prev_abs_mean = 0,
+            interval_plan = [],
+            detect_back_target = None ):
 
         self.wav_offset = wav_offset
         entire_abs_mean = np.abs(wav).mean()
 
-        result, result_d = {}, {}
-        concrete_result = {}
-        cur_time = start
-        prev_judge = None
-        prev_c_results = None
-        prev_abs_mean = 0
-        interval_plan = []
-        detect_back_target = None
+
+        state_vars = [
+            "result",   	"result_d",      "concrete_result",
+            "cur_time",		"prev_judge",    "prev_c_results",	"prev_abs_mean",
+            "interval_plan","detect_back_target"]
+
+        cur_time = cur_time or start
 
         def add_(result, judges):
             for event_time, state in judges.items():
                 result[event_time] = state
-
-        def last_cur_time(prev_c_results): # FIXME: LINQ
-            min_times = map(lambda cr: min(map(lambda itv:itv[0], cr.keys())), prev_c_results)
-            return max(min_times)
 
         wav_len = wav.shape[1]
 
@@ -473,7 +480,7 @@ class Recog:
 
 
                 if detect_back_target != None:
-                    detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
+                    detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, Recog.last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
                     # FIXME?: should expire old judges?
                     judgess, c_results, judgess_d = [*judgess, *tmp_j], [*c_results, *tmp_c], [*judgess_d, *d_js]
                     if detected_judge == None:
@@ -499,7 +506,7 @@ class Recog:
             prev_c_results = c_results
             prev_abs_mean = cur_abs_mean
 
-        return result, result_d, concrete_result
+        return result, result_d, concrete_result, utils.vars_setget(vars(), state_vars)
 
     # mcl: music check length [sec]
     def is_music_starting(self, series, start, delta, duration, mcl, interval, wav, sr, ontology, interests, thres = 1.0):
