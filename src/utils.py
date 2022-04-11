@@ -54,6 +54,16 @@ def if_not_defined(level, name, val):
     else:
         return vars_[name]
 
+def vars_get(context, setget):
+
+    #if   type(setget) == dict:
+    #    for k, v in setget.items():
+    #        context[k] = v
+    if hasattr(setget, "__iter__"):
+        ck = context.keys()
+        return {k: context[k] for k in setget if k in ck}
+
+
 class Ontology:
 
     def __init__(self, jsonpath):
