@@ -368,9 +368,10 @@ class Recog:
     def judges_denoised(cls, judges, concrete_result, thres):
 
         denoised = {k: v for k,v in judges.items()}
-        musics_sorted = filter(lambda t_s: State.Music in t_s[1], sorted(judges.items(), key=lambda t_s: t_s[0]))
+        musics_sorted = filter(lambda t_s: State.Music in t_s[1], sorted(judges.items(), key=lambda t_s: t_s[0])) # filter Music States and sort by time #FIXME: LINQ
         cons = utils.each_cons(list(musics_sorted), 2)
 
+        #print(cons)
         for prev, cur in cons:
             prev_event_time, prev_state = prev
             cur_event_time, cur_state = cur
@@ -379,32 +380,36 @@ class Recog:
             if cur_event_time - prev_event_time <= thres:
                 if State.End in prev_state and State.Start in cur_state or \
                    State.Start in prev_state and State.End  in cur_state:
-                    denoised.pop(prev_event_time)
-                    denoised.pop(cur_event_time)
+                    #print(f"pop {prev_event_time}, {cur_event_time}")
+                    try:
+                        denoised.pop(prev_event_time)
+                        denoised.pop(cur_event_time)
+                    except KeyError: # already deleted
+                        pass
 
-            if not denoised:
-                # calc biggest
-                b = {}
-                times = []
-                for itv, states in concrete_result.items():
-                    times = [*times, itv[0], sum(itv)]
-                    for state in states:
-                        if state in b:
-                            b[state] += itv[1]
-                        else:
-                            b[state] = itv[1]
+        if not denoised:
+            # calc biggest
+            b = {}
+            times = []
+            for itv, states in concrete_result.items():
+                times = [*times, itv[0], sum(itv)]
+                for state in states:
+                    if state in b:
+                        b[state] += itv[1]
+                    else:
+                        b[state] = itv[1]
 
-                # filter, sort by state who has biggests time duration
-                leng = max(times)-min(times)
-                #FIXME: LINQ, 0.5 thres
-                biggests = list(map(lambda s_dur: s_dur[0],
-                    sorted(filter(lambda s_dur: s_dur[1]/leng > 0.5, b.items()), key=lambda s_dur: s_dur[1]) ))
+            # filter, sort by state who has biggests time duration
+            leng = max(times)-min(times)
+            #FIXME: LINQ, 0.5 thres
+            biggests = list(map(lambda s_dur: s_dur[0],
+                sorted(filter(lambda s_dur: s_dur[1]/leng > 0.5, b.items()), key=lambda s_dur: s_dur[1]) ))
 
-                if State.Music in biggests:
-                    biggest = State.Music|State.InProgress
-                else:
-                    biggest = biggests[-1]
-                denoised[min(times)] = biggest
+            if State.Music in biggests:
+                biggest = State.Music|State.InProgress
+            else:
+                biggest = biggests[-1]
+            denoised[min(times)] = biggest
 
         return denoised
 
@@ -423,10 +428,10 @@ class Recog:
             prev_judge = None, prev_c_results= None,
             prev_abs_mean = 0,
             interval_plan = [],
-            detect_back_target = None ):
+            detect_back_target = None, entire_abs_mean = 0 ):
 
         self.wav_offset = wav_offset
-        entire_abs_mean = np.abs(wav).mean()
+        entire_abs_mean = entire_abs_mean or np.abs(wav).mean()
 
 
         state_vars = [
@@ -456,13 +461,16 @@ class Recog:
 
             if prev_judge != None:
                 if not State.Music in prev_judge and State.Music in cur_judge: # non Music -> Music
-                    if State.Start in cur_judge: # music start
+                    if not State.End in cur_judge: # music start or InPro
                         is_starting, next_cur_time, judgess, c_results = \
                             Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
 
                         if is_starting:
                             interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
-                    else: # next is music InPro or End, without Starting
+                        if State.InProgress in cur_judge:
+                            detect_back_target = State.Music|State.Start
+
+                    else: # next is End, without Starting
                         detect_back_target = State.Music|State.Start
 
                 elif State.Music in prev_judge and not State.Music in cur_judge: # Music -> non Music
@@ -475,21 +483,33 @@ class Recog:
                     elif State.InProgress in prev_judge and State.InProgress in cur_judge: # InProgress but
                         # music looks changing? e.g. BGM -> singing and interval plan in progress
                         # FIXME: very naive judgement
-                        if (prev_abs_mean > entire_abs_mean) != (cur_abs_mean > entire_abs_mean) and interval_plan:
+                        #if (prev_abs_mean > entire_abs_mean) != (cur_abs_mean > entire_abs_mean) and interval_plan:
+                        if interval_plan:
+                            #print(f"p,c,e {prev_abs_mean}, {cur_abs_mean}, {entire_abs_mean}")
+                            if (prev_abs_mean < entire_abs_mean) and (cur_abs_mean > entire_abs_mean):
+                                detect_back_target = State.Music|State.Start
+                            elif (prev_abs_mean > entire_abs_mean) and (cur_abs_mean < entire_abs_mean):
+                                detect_back_target = State.Music|State.End
+                    elif State.InProgress in prev_judge and State.Start in cur_judge: # Not End but Start
                             detect_back_target = State.Music|State.End
 
 
+
                 if detect_back_target != None:
+                    print(f"detect_back {detect_back_target}")
                     detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, Recog.last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
                     # FIXME?: should expire old judges?
                     judgess, c_results, judgess_d = [*judgess, *tmp_j], [*c_results, *tmp_c], [*judgess_d, *d_js]
                     if detected_judge == None:
                         print(f"Failed to find {detect_back_target} (at {cur_time})")
 
-                    interval_plan = [] # FIXME? only for Music END?
+                    # FIXME? only for Music END
+                    if detect_back_target == State.Music|State.End and detected_judge != None:
+                        interval_plan = []
+
                     detect_back_target = None
 
-
+            #print(interval_plan)
             for judges in judgess:
                 add_(result, judges)
             for c_result in c_results:
@@ -506,7 +526,7 @@ class Recog:
             prev_c_results = c_results
             prev_abs_mean = cur_abs_mean
 
-        return result, result_d, concrete_result, utils.vars_setget(vars(), state_vars)
+        return result, result_d, concrete_result, utils.vars_get(vars(), state_vars)
 
     # mcl: music check length [sec]
     def is_music_starting(self, series, start, delta, duration, mcl, interval, wav, sr, ontology, interests, thres = 1.0):
