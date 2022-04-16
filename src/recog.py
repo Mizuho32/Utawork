@@ -437,7 +437,7 @@ class Recog:
 
             result = {}, result_d = {}, concrete_result = {},
             cur_time = None,
-            prev_judge = None, prev_c_results= None,
+            prev_judge = None, prev_c_results= None, prev_judges_d = None,
             prev_abs_mean = 0,
             interval_plan = [],
             detect_back_target = None, entire_abs_mean = 0 ):
@@ -448,7 +448,7 @@ class Recog:
 
         state_vars = [
             "result",   	"result_d",      "concrete_result",
-            "cur_time",		"prev_judge",    "prev_c_results",	"prev_abs_mean",
+            "cur_time",		"prev_judge",    "prev_c_results",	"prev_abs_mean", "prev_judges_d",
             "interval_plan","detect_back_target"]
 
         cur_time = cur_time or start
@@ -512,7 +512,7 @@ class Recog:
 
                 if detect_back_target != None:
                     print(f"detect_back {detect_back_target}")
-                    detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, detect_back_target, series, cur_time, delta, duration, Recog.last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
+                    detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, prev_judges_d, detect_back_target, series, cur_time, delta, duration, Recog.last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
                     # FIXME?: should expire old judges?
                     judgess, c_results, judgess_d = [*judgess, *tmp_j], [*c_results, *tmp_c], [*judgess_d, *d_js]
                     if detected_judge == None:
@@ -529,8 +529,8 @@ class Recog:
                 add_(result, judges)
             for c_result in c_results:
                 concrete_result = {**c_result, **concrete_result}
-            for judges_d in judgess_d:
-                add_(result_d, judges_d)
+            for judges_d_ in judgess_d:
+                add_(result_d, judges_d_)
 
             if interval_plan:
                 cur_time += interval_plan.pop()
@@ -540,6 +540,7 @@ class Recog:
             prev_judge = cur_judge
             prev_c_results = c_results
             prev_abs_mean = cur_abs_mean
+            prev_judges_d = judges_d
 
         return result, result_d, concrete_result, utils.vars_get(vars(), state_vars)
 
@@ -570,7 +571,7 @@ class Recog:
         return music_starting, last_time, judgess, c_results
 
     # start: future,  end: past
-    def back_to_change(self, target, series, start, delta, duration, end, wav, sr, ontology, interests, thres = 1.0):
+    def back_to_change(self, prev_judges_d, target, series, start, delta, duration, end, wav, sr, ontology, interests, thres = 1.0):
         length = start - (end+duration)
         count = int(length // duration)
 
@@ -596,14 +597,27 @@ class Recog:
                     judgess_d.append( Recog.judges_denoised(judges, c_result, thres) )
                     #print(c_result, judges, judgess_d[-1])
 
-                    if any(map(lambda etime_st: target == etime_st[1], judgess_d[-1].items())):
+                    # includes target for latest added judges_d? and consistent?
+                    if any(map(lambda etime_st: target == etime_st[1], judgess_d[-1].items())) and \
+                       Recog.consistent_judge_series([*judgess_d, prev_judges_d]):
                         return judgess_d[-1], judgess_d, judgess, c_results
 
                 except IndexError:
                     break
 
-        return None, judgess_d, judgess, c_results
+        return None, [], judgess, c_results
 
+    @classmethod
+    def consistent_judge_series(cls, judges_series):
+
+        j_all = {}
+        for js in judges_series: # FIXME: LINQ
+            for t, j in js.items():
+                j_all[t] = j
+
+        cons2 = utils.each_cons(sorted(j_all.items(), key=lambda j: j[0]), 2)
+        # transition() -> label, detect_back_target
+        return all([ (Label.OK in transition(prev[1], cur[1])[0]) for prev, cur in cons2])
 
 
     @classmethod
@@ -724,10 +738,10 @@ def transition(prev_judge, cur_judge):
         if State.End in prev_judge and State.InProgress in cur_judge: # music not start but music (END->InPro)
             return [Label.Music_withno_Start|BAD, State.Music|State.Start]
 
-        elif State.InProgress in prev_judge and State.InProgress in cur_judge: # InProgress
+        elif State.InProgress in prev_judge and State.InProgress in cur_judge: # InProgress -> InPro
             return [Label.Music_to_Music|OK, None]
 
-        elif State.InProgress in prev_judge and State.Start in cur_judge: # Not End but Start
+        elif State.InProgress in prev_judge and State.Start in cur_judge: # Not End but Start (InPro -> Start)
             return [Label.Music_Start_withno_End|BAD, State.Music|State.End]
 
     return [OK, None]
