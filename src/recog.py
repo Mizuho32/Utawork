@@ -1,21 +1,26 @@
-import os, sys
+import os, sys, time
 import csv, re
 from enum import Flag, auto
 import functools
+import pathlib, datetime
 
 import scipy
 import numpy as np
 import torchaudio
 import torch
 import matplotlib.cm as cm
+import librosa
+import yaml
+import pickle
 
 from . import utils
 
 class Recog:
 
-    def __init__(self, ASTModel, input_tdim, label_path, pth_name="audioset_10_10_0.4593.pth"):
+    def __init__(self, ASTModel, input_tdim, label_path, pth_name="audioset_10_10_0.4593.pth", model_sr=16000):
         self.labels, self.ids = self.load_label(label_path)
         self.wav_offset = 0
+        self.model_sr = model_sr
 
         ast_mdl = ASTModel(label_dim=527, input_tdim=input_tdim, imagenet_pretrain=False, audioset_pretrain=False)
 
@@ -64,6 +69,9 @@ class Recog:
 
         if type(y) == torch.Tensor:
             y = y.to('cpu').detach().numpy().copy()
+
+        if y.shape[0]==1: #mono
+            y = y.reshape(y.shape[-1])
 
         if ax is None:
             plt.figure(figsize=(w, h))
@@ -202,6 +210,10 @@ class Recog:
     def abst_infer(self, wav, sr, ontology, interests, target_length=1024, mel_bins=128, frame_shift=10, repeat=False):
 
         #print(wav.shape, sr, target_length, mel_bins, frame_shift, repeat)
+        if int(sr) != int(self.model_sr):
+            wav = utils.resample(wav, sr, self.model_sr)
+            sr = self.model_sr
+
         fbank_orig = Recog.fbank(wav, sr, target_length, mel_bins=mel_bins, frame_shift=frame_shift, repeat=repeat)
 
         tensor = fbank_orig.expand(1, target_length, mel_bins)           # reshape the feature
@@ -220,10 +232,10 @@ class Recog:
         slice_start = int(sr*(start - self.wav_offset))
         slice_end   = int(sr*(end   - self.wav_offset))
 
-        if slice_start < 0 and slice_end > wav.shape[1]:
+        if slice_start < 0 and slice_end > wav.shape[-1]:
             raise IndexError(f"Invalid slice {slice_start}:{slice_end} for {wav.shape}")
 
-        return wav[:, slice_start:slice_end]
+        return wav[..., slice_start:slice_end]
 
     # search cache. count can be negative value
     def cache(self, series, start, delta, count, wav, sr, ontology, interests):
@@ -404,12 +416,12 @@ class Recog:
             #FIXME: LINQ, 0.5 thres
             biggests = list(map(lambda s_dur: s_dur[0],
                 sorted(filter(lambda s_dur: s_dur[1]/leng > 0.5, b.items()), key=lambda s_dur: s_dur[1]) ))
-
-            if State.Music in biggests:
-                biggest = State.Music|State.InProgress
-            else:
-                biggest = biggests[-1]
-            denoised[min(times)] = biggest
+            if times and biggests:
+                if State.Music in biggests:
+                    biggest = State.Music|State.InProgress
+                else:
+                    biggest = biggests[-1]
+                denoised[min(times)] = biggest
 
         return denoised
 
@@ -419,7 +431,7 @@ class Recog:
         return max(min_times)
 
 
-    def detect_music(self, onto, series, start, delta, duration, wav_offset, wav, sr, ontology, interests,
+    def detect_music(self, series, start, delta, duration, wav_offset, wav, sr, ontology, interests,
             music_length=4*60, music_check_len=20, thres=1.0,
             min_interval=5, big_interval=15, stop=np.infty,
 
@@ -445,20 +457,28 @@ class Recog:
             for event_time, state in judges.items():
                 result[event_time] = state
 
-        wav_len = wav.shape[1]
+        wav_len = wav.shape[-1]
 
         while cur_time < stop and sr*(cur_time+duration - wav_offset) < wav_len:
-            judges, c_result = Recog.judge_segment(self, onto, series, cur_time, delta, duration, wav, sr, ontology, interests)
+
+            # do inference
+            try:
+                judges, c_result = Recog.judge_segment(self, ontology, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            except IndexError as ex:
+                print(ex)
+                raise ex
+                break
             cur_abs_mean = np.abs(Recog.slice_wav(self, wav, sr, cur_time, cur_time+duration)).mean()
 
 
-            print(judges)
+            utils.print_judges(judges)
+            # denoise inference
             judges_d = Recog.judges_denoised(judges, c_result, thres)
             cur_judge = judges_d[max(judges_d.keys())] # get most recent State
 
             judgess, c_results, judgess_d = [judges], [c_result], [judges_d]
 
-
+            # detect chagnes
             if prev_judge != None:
                 if not State.Music in prev_judge and State.Music in cur_judge: # non Music -> Music
                     if not State.End in cur_judge: # music start or InPro
@@ -599,15 +619,84 @@ class Recog:
         return [*[min_interval]*min_count, *[big_interval]*big_count]
 
 
+    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty):
+
+        save_dir = pathlib.Path(save_dir)
+        if not save_dir.exists():
+            raise FileNotFoundError(f"No such a directory {save_dir}")
 
 
+        wav_offset = start
+        means = []
+        states = {}
+        metadata = {"filename": filename, "delta": delta, "duration": duration, "mono": is_mono,
+                    "sr": sr, "cache_list": []}
+
+        i = 0
+        while start+clip_len <= stop_time:
+
+            wav, sr = librosa.load(filename, sr=sr, mono=is_mono, offset=wav_offset, duration=clip_len)
+            if len(wav) == 1: # empty
+                break
+
+            means.append(np.abs(wav).mean())
+            entire_abs_mean = np.median(means)
+
+            print(f"Start:{start}, len:{clip_len}")
+
+            # Infer
+            calc_start = time.time()
+            detect_series, detect_d_series, conc_series, states = Recog.detect_music(self, infer_series,
+                    start, delta, duration, wav_offset, wav, sr,
+                    ontology, interests, entire_abs_mean=entire_abs_mean, **states)
+            calc_end = time.time()
+
+            # Save cache
+            infer_series_save = {k: v for k,v in infer_series.items() if start <= k[0] and k[0] <= start+clip_len}
+
+            metadata["cache_list"].append({
+                "start": float(start), "clip_len": clip_len, "abs_mean": float(entire_abs_mean), "calc_time": calc_end-calc_start,
+                "wav_offset": float(wav_offset),
+                "data": f"data{i}.pickle"})
+            data = {"infer_series": infer_series_save,         "detect_series": detect_series,
+                    "detect_series_denoised": detect_d_series, "state_series": conc_series}
 
 
+            with open(save_dir / "metadata.yaml", 'w') as file:
+                yaml.dump(metadata, file)
+
+            with open(save_dir / metadata["cache_list"][-1]["data"], mode="wb") as f:
+                pickle.dump(data, f)
 
 
+            wav_offset = Recog.last_cur_time(states["prev_c_results"])
+            start = states["cur_time"]
+
+            i += 1
 
 
+        return infer_series, detect_series, detect_d_series, conc_series
 
+
+    @classmethod
+    def load_cache(cls, save_dir, load_sr=100, show_mono=True):
+        save_dir = pathlib.Path(save_dir)
+
+        with open(save_dir / "metadata.yaml", 'r') as file:
+            metadata = yaml.safe_load(file)
+
+        for i in range(len(metadata["cache_list"])):
+            cache = metadata["cache_list"][i]
+
+            with open(save_dir / cache["data"], 'rb') as file:
+                cache["data"] = pickle.load(file)
+
+            filename = metadata["filename"]
+            wav, sr = librosa.load(filename, sr=int(load_sr), mono=show_mono, offset=cache["start"], duration=cache["clip_len"])
+            cache["wav"] = wav
+            cache["load_sr"] = sr
+
+        return metadata
 
 
 
