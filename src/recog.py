@@ -480,39 +480,34 @@ class Recog:
 
             # detect chagnes
             if prev_judge != None:
-                if not State.Music in prev_judge and State.Music in cur_judge: # non Music -> Music
-                    if not State.End in cur_judge: # music start or InPro
-                        is_starting, next_cur_time, judgess, c_results = \
-                            Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
+                label, detect_back_target = transition(prev_judge, cur_judge)
 
-                        if is_starting:
-                            interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
-                        if State.InProgress in cur_judge:
+                # ! Music -> Music
+                if Label.Music_Start in label or Label.Music_Already_Start in label: # music start or InPro
+                    is_starting, next_cur_time, judgess, c_results = \
+                        Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
+                    if is_starting:
+                        interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
+                #elif Music_End_withno_Start in label:
+
+                # Music -> ! Music
+                #elif Music_Already_End in label:
+
+                # Music -> Music
+                #elif Music_withno_Start in label: # music not start but music (END->InPro)
+
+                elif Label.Music_to_Music in label: # InProgress but
+                    # music looks changing? e.g. BGM -> singing and interval plan in progress
+                    # FIXME: very naive judgement
+                    #if (prev_abs_mean > entire_abs_mean) != (cur_abs_mean > entire_abs_mean) and interval_plan:
+                    if interval_plan:
+                        #print(f"p,c,e {prev_abs_mean}, {cur_abs_mean}, {entire_abs_mean}")
+                        if (prev_abs_mean < entire_abs_mean) and (cur_abs_mean > entire_abs_mean):
                             detect_back_target = State.Music|State.Start
-
-                    else: # next is End, without Starting
-                        detect_back_target = State.Music|State.Start
-
-                elif State.Music in prev_judge and not State.Music in cur_judge: # Music -> non Music
-                    if not State.End in prev_judge: # music end not detected
-                        detect_back_target = State.Music|State.End
-
-                elif State.Music in prev_judge and State.Music in cur_judge: # Music -> Music
-                    if State.End in prev_judge and State.InProgress in cur_judge: # music not start but music (END->InPro)
-                        detect_back_target = State.Music|State.Start
-                    elif State.InProgress in prev_judge and State.InProgress in cur_judge: # InProgress but
-                        # music looks changing? e.g. BGM -> singing and interval plan in progress
-                        # FIXME: very naive judgement
-                        #if (prev_abs_mean > entire_abs_mean) != (cur_abs_mean > entire_abs_mean) and interval_plan:
-                        if interval_plan:
-                            #print(f"p,c,e {prev_abs_mean}, {cur_abs_mean}, {entire_abs_mean}")
-                            if (prev_abs_mean < entire_abs_mean) and (cur_abs_mean > entire_abs_mean):
-                                detect_back_target = State.Music|State.Start
-                            elif (prev_abs_mean > entire_abs_mean) and (cur_abs_mean < entire_abs_mean):
-                                detect_back_target = State.Music|State.End
-                    elif State.InProgress in prev_judge and State.Start in cur_judge: # Not End but Start
+                        elif (prev_abs_mean > entire_abs_mean) and (cur_abs_mean < entire_abs_mean):
                             detect_back_target = State.Music|State.End
 
+                #elif Music_Start_withno_End in label: # Not End but Start
 
 
                 if detect_back_target != None:
@@ -698,6 +693,63 @@ class Recog:
 
         return metadata
 
+#M = State.Music
+#T = State.Talking
+#O = State.Other
+#St = State.Start
+#In = State.InProgress
+#En = State.End
+#Not = State.Not
+
+def transition(prev_judge, cur_judge):
+    OK = Label.OK
+    BAD = Label.BAD
+
+    if not State.Music in prev_judge and State.Music in cur_judge: # non Music -> Music
+        if not State.End in cur_judge: # music start or InPro
+            if State.Start in cur_judge:
+                return [Label.Music_Start|OK, None]
+            else:
+                return [Label.Music_Already_Start|BAD, State.Music|State.Start]
+        else: # next is End, without Starting
+            return [Label.Music_End_withno_Start|BAD, State.Music|State.Start]
+
+
+    elif State.Music in prev_judge and not State.Music in cur_judge: # Music -> non Music
+        if not State.End in prev_judge: # music end not detected
+            return [Label.Music_Already_End|BAD, State.Music|State.End]
+
+
+    elif State.Music in prev_judge and State.Music in cur_judge: # Music -> Music
+        if State.End in prev_judge and State.InProgress in cur_judge: # music not start but music (END->InPro)
+            return [Label.Music_withno_Start|BAD, State.Music|State.Start]
+
+        elif State.InProgress in prev_judge and State.InProgress in cur_judge: # InProgress
+            return [Label.Music_to_Music|OK, None]
+
+        elif State.InProgress in prev_judge and State.Start in cur_judge: # Not End but Start
+            return [Label.Music_Start_withno_End|BAD, State.Music|State.End]
+
+    return [OK, None]
+
+
+class Label(Flag):
+    # ! Music -> Music
+    Music_Start = auto()
+    Music_Already_Start = auto()
+    Music_End_withno_Start = auto()
+
+    # Music -> ! Music
+    Music_Already_End = auto()
+
+    # Music -> Music
+    Music_withno_Start = auto()
+    Music_to_Music = auto()
+    Music_Start_withno_End = auto()
+
+    # Type
+    OK = auto()
+    BAD = auto()
 
 
 
