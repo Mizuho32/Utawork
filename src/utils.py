@@ -2,6 +2,21 @@ import json
 import re, sys
 import numpy as np
 from itertools import groupby
+import scipy.signal as sps
+import time
+
+def print_judges(j): # FIXME: judges shoul be classed
+    for time, st in j.items():
+        print(f" {sec2time(time)}: {repr(st)}")
+
+def sec2time(sec, digit=1):
+    power = 10**digit
+    s, ms = divmod(sec*power, power)
+    return f'%s.%0{digit}d' % (time.strftime('%M:%S', time.gmtime(s)), ms)
+
+def resample(wav, orig_sr, dest_sr):
+    number_of_samples = int(round(wav.shape[-1] * float(dest_sr) / orig_sr))
+    return sps.resample(wav, number_of_samples, axis=1)
 
 def reg(expr, ignore=True):
     if ignore:
@@ -14,6 +29,18 @@ def dicnone(d,k,v=None):
         return d[k]
     except KeyError:
         return v
+
+def slice_wav(self, wav, sr, start, end):
+    slice_start = int(sr*(start))
+    slice_end   = int(sr*(end))
+
+    if slice_start < 0 and slice_end > wav.shape[-1]:
+        raise IndexError(f"Invalid slice {slice_start}:{slice_end} for {wav.shape}")
+
+    return wav[..., slice_start:slice_end]
+
+def wav_len(wav):
+    return wav[-1]
 
 # https://note.nkmk.me/python-round-decimal-quantize/
 def round(val, digit=0):
