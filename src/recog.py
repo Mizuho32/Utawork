@@ -106,18 +106,29 @@ class Recog:
     def classifyshow(cls, ontology, abst_scores_series, xstep=1, ax=None, title="", w=16, h=4):
         # https://www.wizard-notes.com/entry/music-analysis/timelinechart-with-matplotlib
 
-        labels = []
-        for segment, abst_scores in abst_scores_series.items():
+        itvs = {}
+        scores = {}
+        for itv in sorted(abst_scores_series.keys(), key=lambda itv: itv[0]):
+
+            abst_scores = abst_scores_series[itv]
             if type(abst_scores) is tuple:
                 abst_scores = abst_scores[0]
 
-            for i, ident in enumerate(reversed(sorted(abst_scores.keys(), key=lambda i: ontology.to_name(i)))):
-                score = abst_scores[ident]
-                ax.broken_barh([segment], (i, 1), facecolors=cm.jet(score/100))
-                #print(segment, (i, i+1), ontology.to_name(ident))
+            for ident, score in abst_scores.items():
+                try:
+                    itvs[ident].append(itv)
+                except KeyError:
+                    itvs[ident] = [itv]
+                try:
+                    scores[ident].append(score)
+                except KeyError:
+                    scores[ident] = [score]
 
-            if len(labels) < len(abst_scores.keys()):
-                labels = list(reversed(sorted(map(lambda i: ontology.to_name(i), abst_scores.keys()))))
+        for i, ident in enumerate(reversed(sorted(itvs.keys(), key=lambda i: ontology.to_name(i)))):
+            colors = list(map(lambda score: cm.jet(score/100), scores[ident]))
+            ax.broken_barh(itvs[ident], (i, 1), facecolors=colors)
+
+        labels = list(reversed(sorted(map(lambda i: ontology.to_name(i), itvs.keys()))))
 
         ax.set_title(title)
 
