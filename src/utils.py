@@ -10,9 +10,15 @@ def print_judges(j): # FIXME: judges shoul be classed
         print(f" {sec2time(time)}: {repr(st)}")
 
 def sec2time(sec, digit=1):
-    power = 10**digit
-    s, ms = divmod(sec*power, power)
-    return f'%s.%0{digit}d' % (time.strftime('%M:%S', time.gmtime(s)), ms)
+    if type(sec) in [int, float, np.float64]:
+        power = 10**digit
+        s, ms = divmod(sec*power, power)
+        return f'%s.%0{digit}d' % (time.strftime('%M:%S', time.gmtime(s)), ms)
+
+    elif type(sec) == list:
+        return repr(list(map(lambda n: sec2time(n), sec)))
+    elif type(sec) == tuple:
+        return repr(tuple(map(lambda n: sec2time(n), sec)))
 
 def resample(wav, orig_sr, dest_sr):
     number_of_samples = int(round(wav.shape[-1] * float(dest_sr) / orig_sr))
