@@ -446,7 +446,6 @@ class Recog:
             music_length=4*60, music_check_len=20, thres=1.0,
             min_interval=5, big_interval=15, stop=np.infty,
 
-            result = {}, result_d = {}, concrete_result = {},
             cur_time = None,
             prev_judge = None, prev_c_results= None, prev_judges_d = None,
             prev_abs_mean = 0,
@@ -456,9 +455,12 @@ class Recog:
         self.wav_offset = wav_offset
         entire_abs_mean = entire_abs_mean or np.abs(wav).mean()
 
+        result = {}
+        result_d = {}
+        concrete_result = {}
+
 
         state_vars = [
-            "result",   	"result_d",      "concrete_result",
             "cur_time",		"prev_judge",    "prev_c_results",	"prev_abs_mean", "prev_judges_d",
             "interval_plan","detect_back_target"]
 
@@ -639,7 +641,7 @@ class Recog:
         return [*[min_interval]*min_count, *[big_interval]*big_count]
 
 
-    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty):
+    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[]):
 
         save_dir = pathlib.Path(save_dir)
         if not save_dir.exists():
@@ -679,7 +681,8 @@ class Recog:
                 "wav_offset": float(wav_offset),
                 "data": f"data{i}.pickle"})
             data = {"infer_series": infer_series_save,         "detect_series": detect_series,
-                    "detect_series_denoised": detect_d_series, "state_series": conc_series}
+                    "detect_series_denoised": detect_d_series, "state_series": conc_series,
+                    "states": states}
 
 
             with open(save_dir / "metadata.yaml", 'w') as file:
@@ -699,7 +702,7 @@ class Recog:
 
 
     @classmethod
-    def load_cache(cls, save_dir, load_sr=100, show_mono=True):
+    def load_cache(cls, save_dir, load_sr=100, load_mono=True, load_wav=True):
         save_dir = pathlib.Path(save_dir)
 
         with open(save_dir / "metadata.yaml", 'r') as file:
@@ -712,11 +715,67 @@ class Recog:
                 cache["data"] = pickle.load(file)
 
             filename = metadata["filename"]
-            wav, sr = librosa.load(filename, sr=int(load_sr), mono=show_mono, offset=cache["start"], duration=cache["clip_len"])
-            cache["wav"] = wav
-            cache["load_sr"] = sr
+
+            if load_wav:
+                wav, sr = librosa.load(filename, sr=int(load_sr), mono=show_mono, offset=cache["start"], duration=cache["clip_len"])
+                cache["wav"] = wav
+                cache["load_sr"] = sr
 
         return metadata
+
+    @classmethod
+    def merge_intervals(cls, metadata, big_thres=20, mini_thres=4, gap_thres=1.0):
+        itvs = []
+        cur_itv = None
+
+        # raw detect series to (start,end) segments
+        for cache in metadata["cache_list"]:
+            d_series = cache["data"]["detect_series_denoised"]
+            for prev_time, cur_time in utils.each_cons(sorted(d_series.keys()), 2):
+                prev_label = d_series[prev_time]
+                cur_label  = d_series[cur_time]
+                # print(prev_time, prev_label, State.Music in prev_label)
+
+                # MusicStart -> End or InPro
+                if prev_label.value == (State.Music|State.Start).value and State.Music in cur_label:
+                    cur_itv = [prev_time]
+
+                # End
+                if State.Music|State.End == prev_label:
+                    if type(cur_itv) == list:
+                        cur_itv.append(prev_time)
+                        itvs.append(tuple(cur_itv))
+                        cur_itv = None
+
+        # [(indev of itvs, (itv)),...]
+        big_itvs = filter(lambda i_itv: i_itv[1][1] - i_itv[1][0] >= big_thres, enumerate(itvs))
+        #print([(v[0], utils.sec2time(v[1])) for v in  list(big_itvs)])
+
+        result = {}
+        for i, itv in big_itvs:
+            result[i] = list(itv)
+            pre_seq = reversed(range(i))
+            sub_seq = range(i+1, len(itvs))
+
+            for j in pre_seq:
+                pre = itvs[j]
+                if result[i][0] - pre[1] <= gap_thres and pre[1]-pre[0] >= mini_thres: # bit_itv start - pre end < gap_thres & pre >= mini_thres
+                    result[i][0] = pre[0] # update start of itv
+                else:
+                    break
+
+            for j in sub_seq:
+                sub = itvs[j]
+                if sub[0] - result[i][1] <= gap_thres and sub[1]-sub[0] >= mini_thres: # bit_itv start - sub end < gap_thres & sub >= mini_thres
+                    result[i][1] = sub[1] # update end of itv
+                else:
+                    break
+
+        #print([(i, utils.sec2time(itv)) for i, itv in  result.items()])
+
+        return result, itvs
+
+
 
 #M = State.Music
 #T = State.Talking
