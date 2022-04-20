@@ -1,0 +1,7 @@
+= Utawork
+
+Detect music sections from audio files (realtime detecting is a future work) by using audio classification model.
+This is WIP.
+
+== Usage
+See `notebooks/Recog.ipynb`.
