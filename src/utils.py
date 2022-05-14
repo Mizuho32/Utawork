@@ -6,6 +6,7 @@ import scipy.signal as sps
 import time
 
 def print_judges(j): # FIXME: judges shoul be classed
+    print(">>", end="")
     for time, st in j.items():
         print(f" {sec2time(time)}: {repr(st)}")
 
