@@ -243,7 +243,7 @@ class Recog:
         slice_start = int(sr*(start - self.wav_offset))
         slice_end   = int(sr*(end   - self.wav_offset))
 
-        if slice_start < 0 and slice_end > wav.shape[-1]:
+        if slice_start < 0 or slice_end > wav.shape[-1]:
             raise IndexError(f"Invalid slice {slice_start}:{slice_end} for {wav.shape}")
 
         return wav[..., slice_start:slice_end]
@@ -407,6 +407,7 @@ class Recog:
                     try:
                         denoised.pop(prev_event_time)
                         denoised.pop(cur_event_time)
+                        denoised[prev_event_time] = State.Music|State.InProgress # FIXME: cases not only for music
                     except KeyError: # already deleted
                         pass
 
@@ -568,7 +569,10 @@ class Recog:
         music_starting = True
 
         for i in range(count):
-            judges, c_result = Recog.judge_segment(self, ontology, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            try:
+                judges, c_result = Recog.judge_segment(self, ontology, series, cur_time, delta, duration, wav, sr, ontology, interests)
+            except IndexError as ex:
+                break
 
             c_results.append(c_result)
             judgess  .append(judges)
@@ -641,30 +645,48 @@ class Recog:
         return [*[min_interval]*min_count, *[big_interval]*big_count]
 
 
-    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[]):
+    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[], cache_overwrite=False):
 
         save_dir = pathlib.Path(save_dir)
         if not save_dir.exists():
             raise FileNotFoundError(f"No such a directory {save_dir}")
 
 
-        wav_offset = start
-        means = []
-        states = {}
-        metadata = {"filename": filename, "delta": delta, "duration": duration, "mono": is_mono,
-                    "sr": sr, "cache_list": []}
+        # Load cache
+        if not cache_overwrite and (save_dir / "metadata.yaml").exists():
 
-        i = 0
+            with open(save_dir / "metadata.yaml", 'r') as file:
+                metadata = yaml.safe_load(file)
+
+            i = len(metadata["cache_list"]) - 1 # last data index
+            means = list(map(lambda c: c["abs_mean"], metadata["cache_list"]))
+
+            with open(save_dir / metadata["cache_list"][i]["data"], 'rb') as file:
+                states = pickle.load(file)["states"]
+
+            wav_offset = Recog.last_cur_time(states["prev_c_results"])
+            start = states["cur_time"]
+            i += 1
+
+        else:
+            wav_offset = start
+            means = []
+            states = {}
+            metadata = {"filename": filename, "delta": delta, "duration": duration, "mono": is_mono,
+                        "sr": sr, "cache_list": []}
+            i = 0
+
+
         while start+clip_len <= stop_time:
 
+            print(f"{i} Start:{start}, offset:{wav_offset}, len:{clip_len}")
             wav, sr = librosa.load(filename, sr=sr, mono=is_mono, offset=wav_offset, duration=clip_len)
-            if len(wav) == 1: # empty
+            if not sr*(start-wav_offset) < wav.shape[-1]: # empty
                 break
 
             means.append(np.abs(wav).mean())
             entire_abs_mean = np.median(means)
 
-            print(f"Start:{start}, len:{clip_len}")
 
             # Infer
             calc_start = time.time()
