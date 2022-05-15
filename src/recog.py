@@ -438,9 +438,9 @@ class Recog:
         return denoised
 
     @classmethod
-    def last_cur_time(cls, prev_c_results): # FIXME: LINQ
-        min_times = map(lambda cr: min(map(lambda itv:itv[0], cr.keys())), prev_c_results)
-        return max(min_times)
+    def last_cur_time(cls, prev_c_results, nth_latest=1): # FIXME: LINQ
+        min_times = list(sorted(map(lambda cr: min(map(lambda itv:itv[0], cr.keys())), prev_c_results)))
+        return min_times[-nth_latest]
 
 
     def detect_music(self, series, start, delta, duration, wav_offset, wav, sr, ontology, interests,
@@ -526,9 +526,47 @@ class Recog:
 
                 if detect_back_target != None:
                     print(f"detect_back {detect_back_target}")
-                    detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, prev_judges_d, detect_back_target, series, cur_time, delta, duration, Recog.last_cur_time(prev_c_results), wav, sr, ontology, interests, thres = thres)
-                    # FIXME?: should expire old judges?
-                    judgess, c_results, judgess_d = [*judgess, *tmp_j], [*c_results, *tmp_c], [*judgess_d, *d_js]
+                    trial = 1
+                    back_start = cur_time
+                    back_prev_js_d = prev_judges_d
+
+                    #FIXME: use time ordered dict
+                    result_d_keys = list(sorted(result_d.keys()))
+
+                    while True:
+                        #back_end = Recog.last_cur_time(prev_c_results, nth_latest=trial)
+                        back_end = max(back_prev_js_d.keys())
+                        back_prev_judge = back_prev_js_d[back_end]
+                        print(f" {trial}th trial {utils.sec2time(back_start)} {cur_judge}->{utils.sec2time(back_end)} {back_prev_js_d}")
+
+                        detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, back_prev_js_d, detect_back_target, series, back_start, delta, duration, back_end, wav, sr, ontology, interests, thres = thres)
+
+                        try:
+                            if d_js and d_js[-1][back_start] != cur_judge: # back_start nearest one has back_start time event
+                                d_js[-1].pop(back_start) # cur_judge is more reliable
+                        except IndexError:
+                            pass
+
+                        # FIXME?: should expire old judges?
+                        judgess, c_results, judgess_d = [*tmp_j, *judgess], [*tmp_c, *c_results], [*d_js, *judgess_d]
+
+                        # found the target or
+                        # not found but prev judge is not the same as current (so there should exist the target btw them but not found, terminate unfortunately)
+                        if not detected_judge == None or \
+                                detected_judge == None and back_prev_judge != cur_judge:
+                            break
+
+                        trial += 1
+                        back_start = back_end
+                        try:
+                            k = result_d_keys[-trial]
+                            back_prev_js_d = {k: result_d[k]}
+                        except IndexError: # no more item
+                            break
+
+                    #for tmp in judgess_d:
+                    #    print(utils.js2s(tmp, "->", split=", "))
+
                     if detected_judge == None:
                         print(f"Failed to find {detect_back_target} (at {cur_time})")
 
@@ -601,26 +639,66 @@ class Recog:
         c_results = []
         judgess = []
         judgess_d = []
-        #print("back: ", target)
+        hypothesis = []
+        #print("prev: ", prev_judges_d)
+
+        def cr_min(cr): # FIXME: make specialized class
+            return min(map(lambda itv: itv[0], cr.keys()))
+
+        def inserts(i, c_result, judges, judges_d):
+            c_results.insert(i, c_result)
+            judgess  .insert(i, judges)
+            judgess_d.insert(i, judges_d )
+
+        def find_index():
+            cur = cr_min(c_result)
+            for i, cr in enumerate(c_results):
+                if cur < cr_min(cr):
+                    return i
+            return len(c_results) # append
+
+        def no_contradict_add(c_result, judges, judges_d): #FIXME: make specialized class
+            idx = find_index()
+
+            # no contradict insert
+            if idx != 0:
+                prev_js = judgess_d[idx-1]
+                for t in prev_js.keys(): # shift judges who has the same value
+                    try:
+                        j = judges_d.pop(t)
+                        judges_d[utils.round(t+delta, 1)] = j
+                    except KeyError:
+                        pass
+            inserts(idx, c_result, judges, judges_d)
+
 
         # search even -> odd, 1delta overwrap
         for j in range(2):
             for i in map(lambda i: i*2, range(int(len(itvs)/2+1))):
                 try:
                     time, duration = itvs[j+i]
-                    judges, c_result = Recog.judge_segment(self, ontology, series, time, delta, duration, wav, sr, ontology, interests)
-                    c_results.append(c_result)
-                    judgess  .append(judges)
-                    judgess_d.append( Recog.judges_denoised(judges, c_result, thres) )
-                    #print(c_result, judges, judgess_d[-1])
-
-                    # includes target for latest added judges_d? and consistent?
-                    if any(map(lambda etime_st: target == etime_st[1], judgess_d[-1].items())) and \
-                       Recog.consistent_judge_series([*judgess_d, prev_judges_d]):
-                        return judgess_d[-1], judgess_d, judgess, c_results
-
                 except IndexError:
                     break
+                judges, c_result = Recog.judge_segment(self, ontology, series, time, delta, duration, wav, sr, ontology, interests)
+                js_d = Recog.judges_denoised(judges, c_result, thres)
+                no_contradict_add(c_result, judges, js_d)
+
+                # includes target for latest added judges_d? and consistent?
+                found_target = any(map(lambda etime_st: target == etime_st[1], js_d.items()))
+                is_consistent = Recog.consistent_judge_series([*judgess_d, prev_judges_d]) # FIXME: incremental consistency check
+
+                #print(f"{utils.sec2time(time)}", js_d, found_target, is_consistent)
+
+                if found_target and is_consistent:
+                    return js_d, judgess_d, judgess, c_results
+                elif found_target:
+                    hypothesis.append(judgess_d)
+                elif hypothesis and is_consistent:
+                    # return first found hyp. FIXME? to return latest one?
+                    return hypothesis[0], judgess_d, judgess, c_results
+                    #print(sorted([*judgess_d, prev_judges_d], key=lambda d: min(d.keys())))
+                    #print(sorted([*judgess  , prev_judges_d], key=lambda d: min(d.keys())))
+                    #print(sorted(c_results, key=lambda d: min(map(lambda itv: itv[0], d.keys()))))
 
         return None, [], judgess, c_results
 
@@ -724,7 +802,7 @@ class Recog:
 
 
     @classmethod
-    def load_cache(cls, save_dir, load_sr=100, load_mono=True, load_wav=True):
+    def load_cache(cls, save_dir, load_sr=100, show_mono=True, load_wav=True):
         save_dir = pathlib.Path(save_dir)
 
         with open(save_dir / "metadata.yaml", 'r') as file:
