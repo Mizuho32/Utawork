@@ -5,10 +5,12 @@ from itertools import groupby
 import scipy.signal as sps
 import time
 
-def print_judges(j): # FIXME: judges shoul be classed
+def print_judges(js): # FIXME: judges shoul be classed
     print(">>", end="")
-    for time, st in j.items():
-        print(f" {sec2time(time)}: {repr(st)}")
+    print(js2s(js, " ", "\n"))
+
+def js2s(js, prefix="", split=", "):
+    return split.join(list(map(lambda t_j: f"{prefix}{sec2time(t_j[0])}: {repr(t_j[1])}", js.items())))
 
 def sec2time(sec, digit=1):
     if type(sec) in [int, float, np.float64]:
