@@ -5,6 +5,14 @@ from itertools import groupby
 import scipy.signal as sps
 import time
 
+def append_or_overwrite(ar, idx, obj):
+    if len(ar) == idx:
+        ar.append(obj)
+    elif len(ar) > idx:
+        ar[idx] = obj
+    else:
+        raise IndexError(f"{idx} is out of array[{len(ar)}]")
+
 def print_judges(js): # FIXME: judges shoul be classed
     print(">>", end="")
     print(js2s(js, " ", "\n"))
