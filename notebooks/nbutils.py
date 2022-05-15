@@ -44,7 +44,7 @@ def plot_all(metadata, idx, ontology, pygame, recog, show_txt=False):
     recog.Recog.waveplot(plt, librosa, wav, sr, ax=ax[0], offset=start, max_sr=2)
     recog.Recog.classifyshow(ontology, data["infer_series"], ax=ax[1])
     recog.Recog.state_show([recog.State.Music, recog.State.Talking, recog.State.Other], data["state_series"], ax=ax[2])
-    recog.Recog.detect_show(data["detect_series"], xstep=int(cache["clip_len"]//35), ax=ax[3])
+    recog.Recog.detect_show(data["detect_series"], ax=ax[3])
     recog.Recog.detect_show(data["detect_series_denoised"], xstep=int(cache["clip_len"]//35), ax=ax[4])
 
     fig.set_size_inches(16, 8)
