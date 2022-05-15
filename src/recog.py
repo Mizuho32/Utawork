@@ -62,7 +62,10 @@ class Recog:
         return np.array(labels), np.array(ids)
 
     @classmethod
-    def waveplot(cls, plt, librosa, y, sr, offset=0.0, max_sr=100, ax=None, w=16, h=4):
+    def waveplot(cls, plt, librosa, y, sr, offset=0.0, max_sr=100, x_axis="time", ax=None, w=16, h=4):
+
+        if offset >= 300: #FIXME: HELP ME
+            x_axis = "s"
 
         if max_sr > 100:
             max_sr = 100
@@ -75,9 +78,9 @@ class Recog:
 
         if ax is None:
             plt.figure(figsize=(w, h))
-            librosa.display.waveplot(y=y, sr=sr, offset=offset, max_sr=max_sr)
+            librosa.display.waveplot(y=y, sr=sr, offset=offset, max_sr=max_sr, x_axis=x_axis)
         else:
-            librosa.display.waveplot(y=y, sr=sr, ax=ax, offset=offset, max_sr=max_sr)
+            librosa.display.waveplot(y=y, sr=sr, ax=ax, offset=offset, max_sr=max_sr, x_axis=x_axis)
 
     @classmethod
     def specshow(cls, plt, librosa, fbank, sr, hop_length, cb=True, ax=None, title="", w=16, h=4):
@@ -401,13 +404,15 @@ class Recog:
 
             # remove very short (music or non music)
             if cur_event_time - prev_event_time <= thres:
-                if State.End in prev_state and State.Start in cur_state or \
-                   State.Start in prev_state and State.End  in cur_state:
-                    #print(f"pop {prev_event_time}, {cur_event_time}")
+                if State.End   in prev_state and State.Start in cur_state or \
+                   State.Start in prev_state and State.End   in cur_state:
                     try:
+                        #print(f"pop {prev_event_time}, {cur_event_time}")
                         denoised.pop(prev_event_time)
                         denoised.pop(cur_event_time)
-                        denoised[prev_event_time] = State.Music|State.InProgress # FIXME: cases not only for music
+                        if State.End in prev_state and State.Start in cur_state:
+                            # FIXME: cases not only for music
+                            denoised[prev_event_time] = State.Music|State.InProgress
                     except KeyError: # already deleted
                         pass
 
@@ -544,7 +549,7 @@ class Recog:
                         try:
                             if d_js and d_js[-1][back_start] != cur_judge: # back_start nearest one has back_start time event
                                 d_js[-1].pop(back_start) # cur_judge is more reliable
-                        except IndexError:
+                        except (IndexError, KeyError) as e:
                             pass
 
                         # FIXME?: should expire old judges?
@@ -687,7 +692,7 @@ class Recog:
                 found_target = any(map(lambda etime_st: target == etime_st[1], js_d.items()))
                 is_consistent = Recog.consistent_judge_series([*judgess_d, prev_judges_d]) # FIXME: incremental consistency check
 
-                #print(f"{utils.sec2time(time)}", js_d, found_target, is_consistent)
+                #print(f"{utils.sec2time(time)}", judges, js_d, found_target, is_consistent)
 
                 if found_target and is_consistent:
                     return js_d, judgess_d, judgess, c_results
@@ -731,7 +736,8 @@ class Recog:
 
 
         # Load cache
-        if not cache_overwrite and (save_dir / "metadata.yaml").exists():
+        metad_exist = (save_dir / "metadata.yaml").exists()
+        if not cache_overwrite and metad_exist:
 
             with open(save_dir / "metadata.yaml", 'r') as file:
                 metadata = yaml.safe_load(file)
@@ -750,8 +756,13 @@ class Recog:
             wav_offset = start
             means = []
             states = {}
-            metadata = {"filename": filename, "delta": delta, "duration": duration, "mono": is_mono,
-                        "sr": sr, "cache_list": []}
+
+            if metad_exist:
+                with open(save_dir / "metadata.yaml", 'r') as file:
+                    metadata = yaml.safe_load(file)
+            else:
+                metadata = {"filename": filename, "delta": delta, "duration": duration, "mono": is_mono,
+                            "sr": sr, "cache_list": []}
             i = 0
 
 
@@ -762,9 +773,18 @@ class Recog:
             if not sr*(start-wav_offset) < wav.shape[-1]: # empty
                 break
 
+            # load infer_series cache if exists
+            if i < len(metadata["cache_list"]):
+                pkl_file =  save_dir / metadata["cache_list"][i]["data"]
+                if pkl_file.exists():
+                    with open(pkl_file, 'rb') as file:
+                        for k, v in pickle.load(file)["infer_series"].items():
+                            infer_series[k] = v
+
+
+            # calc abs mean
             means.append(np.abs(wav).mean())
             entire_abs_mean = np.median(means)
-
 
             # Infer
             calc_start = time.time()
@@ -776,7 +796,7 @@ class Recog:
             # Save cache
             infer_series_save = {k: v for k,v in infer_series.items() if start <= k[0] and k[0] <= start+clip_len}
 
-            metadata["cache_list"].append({
+            utils.append_or_overwrite(metadata["cache_list"], i, {
                 "start": float(start), "clip_len": clip_len, "abs_mean": float(entire_abs_mean), "calc_time": calc_end-calc_start,
                 "wav_offset": float(wav_offset),
                 "data": f"data{i}.pickle"})
@@ -788,7 +808,7 @@ class Recog:
             with open(save_dir / "metadata.yaml", 'w') as file:
                 yaml.dump(metadata, file)
 
-            with open(save_dir / metadata["cache_list"][-1]["data"], mode="wb") as f:
+            with open(save_dir / metadata["cache_list"][i]["data"], mode="wb") as f:
                 pickle.dump(data, f)
 
 
@@ -848,9 +868,10 @@ class Recog:
                         cur_itv = None
 
         # [(indev of itvs, (itv)),...]
-        big_itvs = filter(lambda i_itv: i_itv[1][1] - i_itv[1][0] >= big_thres, enumerate(itvs))
-        #print([(v[0], utils.sec2time(v[1])) for v in  list(big_itvs)])
+        big_itvs = list( filter(lambda i_itv: i_itv[1][1] - i_itv[1][0] >= big_thres, enumerate(itvs)) )
+        #print("bigs:\n", [(v[0], utils.sec2time(v[1])) for v in  list(big_itvs)])
 
+        # Merge intervals to big itvs where intervals are bigger than mini_thres and gap btw them is less then gap_thres
         result = {}
         for i, itv in big_itvs:
             result[i] = list(itv)
