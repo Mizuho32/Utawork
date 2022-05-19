@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <title>timestamp tagger</title>
+      <meta charset="utf-8">
+  </head>
+  <body>
+    <!-- 1. The <iframe> (and video player) will replace this <div> tag. -->
+    <div class="whole">
+
+      <div class="leftside">
+        <div id="player_container">
+          <div id="player"></div>
+          <div>
+            <input id="video_url" type="text" value="4PEcgxNG27A"></input>
+            <button id="load_video" onclick="update_video(event);">Load video</input>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <input id="segments" type="radio" name="tab_item" checked>
+          <label class="tab_item" for="segments">Segments</label>
+          <input id="raw_times" type="radio" name="tab_item">
+          <label class="tab_item" for="raw_times">Raw times</label>
+
+          <div class="tab_content" id="segments_content">
+            <table class="tablecss">
+              <thead>
+                <tr>
+                <th class="no">No</th>
+                <th class="start">Start</th>
+                <th class="end">End</th>
+                <th class="length">Length</th>
+                <th class="name">Song name</th>
+                <th class="artist">Artist</th>
+                </tr>
+              </thead>
+              <tbody id="stamps">
+                <tr>
+                  <td class="no">-1</td>
+                  <td class="time start"><input type="time" value="00:01:00" onchange="timechange(event);" /></th>
+                  <td class="time end"><input type="time" value="00:02:00" onchange="timechange(event);" /></th>
+                  <td class="length">1:00</th>
+                  <td class="name"><input type="text"></input></th>
+                  <td class="artist"><input type="text"></input></th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tab_content" id="raw_times_content">
+            <textarea id="raw_times_input"></textarea>
+            <button id="raw_times_btn" onclick="load_segments(event);">Apply</input>
+          </div>
+        </div>
+      </div>
+
+      <div id="search"><div></div></div>
+    </div>
+    <!--<button onclick="playVideo()">start</button>-->
+
+
+    <link href="css/style.css" type="text/css" rel="stylesheet">
+    <!--A<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>-->
+    <!--<script src="https://www.youtube.com/iframe_api"></script>-->
+    <script src="js/utils.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,105 @@
+html, body { 
+  margin: 0; 
+  padding: 0; 
+  width: 100%; 
+  height: 100%;
+}
+div.whole {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+}
+div.leftside {
+  width: 50%;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+}
+div.tabs {
+  height: 50%;
+}
+div.tab_content {
+  height: 100%;
+}
+div#segments_content {
+  overflow: scroll;
+}
+#raw_times_content > textarea {
+  margin: 0; 
+  padding: 0; 
+  height:90%;
+  width: 100%;
+}
+div#player {
+  width: 100%;
+  height: 50%;
+}
+input#video_url {
+  width: 90%;
+  /*-moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;*/
+  box-sizing: border-box;
+}
+
+div#search {
+  width: 50%;
+  height: 90%;
+  overflow: scroll;
+}
+thead, tbody{
+  /*font-size: 14px;*/
+}
+thead {
+  text-align: center;
+}
+tbody {
+  height: 100px;
+  overflow-y: scroll;
+}
+th {
+  position: sticky;
+  top: 0;
+  left: 0;
+  border: solid #000000 1px;
+  background-color: #AACCFF;
+}
+td {
+  border: solid #000000 1px;
+  background-color: #EEEEEE;
+}
+
+
+
+/* # Tab
+https://bagelee.com/design/css/create_tabs_using_only_css/
+*/
+
+.tab_item:hover {
+  opacity: 0.75;
+}
+
+/*ラジオボタンを全て消す*/
+input[name="tab_item"] {
+  display: none;
+}
+
+/*タブ切り替えの中身のスタイル*/
+.tab_content {
+  display: none;
+  /*padding: 40px 40px 0;*/
+  clear: both;
+  overflow: hidden;
+}
+
+/*選択されているタブのコンテンツのみを表示*/
+#segments:checked ~ #segments_content,
+#raw_times:checked ~ #raw_times_content {
+  display: block;
+}
+
+/*選択されているタブのスタイルを変える*/
+.tabs input:checked + .tab_item {
+  background-color: #5ab4bd;
+  color: #fff;
+}
