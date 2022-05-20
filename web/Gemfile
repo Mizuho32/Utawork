@@ -6,5 +6,8 @@ gem 'sinatra'
 gem 'sinatra-contrib'
 gem 'sinatra-websocket'
 gem 'oga'
-gem 'irb'
-gem 'rdoc'
+
+group :develop do
+  gem 'irb'
+  gem 'rdoc'
+end
