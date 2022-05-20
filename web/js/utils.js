@@ -104,7 +104,6 @@ function on_songname_focus(e) {
   let time = to_num(raw_time);
 
   console.log(`Start ${raw_time}`);
-  console.log(player);
 
   player.playVideo();
   player.seekTo(time, true);
@@ -117,11 +116,21 @@ function update_video(e) {
   player.loadVideoById(id);
 }
 
+function adjacent_row(row, delta) {
+  let idx = row.rowIndex + delta -1; // 1 origin?
+
+  if (0 <= idx && idx < row.parentNode.rows.length) {
+    return row.parentNode.rows[idx];
+  } else {
+    return row;
+  }
+}
+
 function apply_tablerow_shortcuts(row) {
   row.addEventListener('keyup', (e) => {
     //console.log(e.target, `Key "${e.key}" released  [event: keyup]`);
 
-    if (e.target.type != "text" && e.key == " ") { // space key
+    if (e.target.type != "text" && e.key == " ") { // space key and not text input
       let st = player.getPlayerState();
       if (st == YT.PlayerState.PLAYING) {
         player.pauseVideo();
@@ -130,6 +139,14 @@ function apply_tablerow_shortcuts(row) {
       }
     } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter
       socket.send(e.target.value);      
+    } else if (e.keyCode == 40 || e.keyCode == 38) { // down or up
+      //                         td            tr
+      let current_row = e.target.parentElement.parentElement
+      let target_row = adjacent_row(current_row, e.keyCode - 39);
+
+      if (target_row != current_row) {
+        target_row.querySelector("td.name > input").focus();
+      }
     }
   });
 }
