@@ -12,16 +12,18 @@
         <div id="player_container">
           <div id="player"></div>
           <div>
-            <input id="video_url" type="text" value="4PEcgxNG27A"></input>
+            <input id="video_url" type="text" value=""></input>
             <button id="load_video" onclick="update_video(event);">Load video</input>
           </div>
         </div>
 
         <div class="tabs">
-          <input id="segments" type="radio" name="tab_item" checked>
-          <label class="tab_item" for="segments">Segments</label>
-          <input id="raw_times" type="radio" name="tab_item">
-          <label class="tab_item" for="raw_times">Raw times</label>
+          <input id="raw_times" type="radio" name="tab_item" checked>
+            <label class="tab_item" for="raw_times">Load raw times data |</label>
+          <input id="segments" type="radio" name="tab_item">
+            <label class="tab_item" for="segments">Tag the songs |</label>
+          <input id="output" type="radio" name="tab_item" onclick="show_output(event);">
+            <label class="tab_item" for="output">Output</label>
 
           <div class="tab_content" id="segments_content">
             <table class="tablecss">
@@ -35,21 +37,15 @@
                 <th class="artist">Artist</th>
                 </tr>
               </thead>
-              <tbody id="stamps">
-                <tr>
-                  <td class="no">-1</td>
-                  <td class="time start"><input type="time" value="00:01:00" onchange="timechange(event);" /></th>
-                  <td class="time end"><input type="time" value="00:02:00" onchange="timechange(event);" /></th>
-                  <td class="length">1:00</th>
-                  <td class="name"><input type="text"></input></th>
-                  <td class="artist"><input type="text"></input></th>
-                </tr>
-              </tbody>
+              <tbody id="stamps"></tbody>
             </table>
           </div>
           <div class="tab_content" id="raw_times_content">
             <textarea id="raw_times_input"></textarea>
-            <button id="raw_times_btn" onclick="load_segments(event);">Apply</input>
+            <button id="raw_times_btn" onclick="load_segments(event);">Load</input>
+          </div>
+          <div class="tab_content" id="output_content">
+            <textarea></textarea>
           </div>
         </div>
       </div>

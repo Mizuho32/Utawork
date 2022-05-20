@@ -25,15 +25,20 @@ div.tab_content {
 div#segments_content {
   overflow: scroll;
 }
-#raw_times_content > textarea {
+#raw_times_content > textarea, #output_content > textarea {
   margin: 0; 
   padding: 0; 
   height:90%;
   width: 100%;
 }
-div#player {
+div#player_container {
   width: 100%;
   height: 50%;
+  overflow: scroll;
+}
+div#player {
+  width: 100%;
+  /*height:100%;*/
 }
 input#video_url {
   width: 90%;
@@ -94,6 +99,7 @@ input[name="tab_item"] {
 
 /*選択されているタブのコンテンツのみを表示*/
 #segments:checked ~ #segments_content,
+#output:checked ~ #output_content,
 #raw_times:checked ~ #raw_times_content {
   display: block;
 }

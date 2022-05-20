@@ -113,7 +113,11 @@ function update_video(e) {
   let id = url2id(e.target.parentElement.querySelector("input").value);
   console.log(id);
   
-  player.loadVideoById(id);
+  if (player === undefined) {
+    player = load_video(id);
+  } else {
+    player.loadVideoById(id);
+  }
 }
 
 function adjacent_row(row, delta) {
@@ -149,4 +153,28 @@ function apply_tablerow_shortcuts(row) {
       }
     }
   });
+}
+
+function show_output(e) {
+  let table = document.querySelector("#stamps");
+  let text = Array.from(table.rows)
+    .map(row => {
+      let name = row.querySelector("td.name > input[type='text']").value;
+      let artist = row.querySelector("td.artist > input[type='text']").value;
+
+      if (!name && !artist) { return ""; }
+
+      let times = Array.from(row.querySelectorAll("td.time > input"))
+        .map(time_input=>to_num(time_input.value))
+        .sort((l,r)=>l-r)
+        .map(n=>to_time(n))
+        .join(" - ");
+
+      return `${times} ${name} / ${artist}`;
+    })
+    .filter(row=>row)
+    .join("\n");
+
+  document.querySelector("#output_content > textarea").textContent = text;
+  console.log(text);
 }

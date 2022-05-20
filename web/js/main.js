@@ -9,7 +9,7 @@ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 //    after the API code downloads.
 var player;
 function onYouTubeIframeAPIReady() {
-  player = load_video('M7lc1UVf-VE');
+  //player = load_video('M7lc1UVf-VE');
 
   //player = new YT.Player('player', {
   //  /*height: '360',
@@ -33,7 +33,7 @@ function playVideo() {
 
 
 let table = document.querySelector("#stamps");
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 0; i++) {
   let new_row = table.insertRow(-1);
   new_row.innerHTML = segment_row(i, 0, 200);
 }
