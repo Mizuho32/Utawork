@@ -98,16 +98,19 @@ function timechange(e) {
   player.seekTo(Math.min(...times), true);
 }
 
+var focused;
 function on_songname_focus(e) {
-  let tr = e.target.parentElement.parentElement;
-  let raw_time = tr.querySelector("td.time.start > input").value;
-  let time = to_num(raw_time);
+  if (e.target != focused) {
+    let tr = e.target.parentElement.parentElement;
+    let raw_time = tr.querySelector("td.time.start > input").value;
+    let time = to_num(raw_time);
+    focused = e.target;
 
-  console.log(`Start ${raw_time}`);
-
-  if (player !== undefined) {
-    player.playVideo();
-    player.seekTo(time, true);
+    console.log(`Start ${raw_time}`);
+    if (player !== undefined) {
+      player.playVideo();
+      player.seekTo(time, true);
+    }
   }
 }
 
