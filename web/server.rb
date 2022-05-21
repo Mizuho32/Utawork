@@ -33,6 +33,7 @@ set :public_folder, __dir__
 set :server, 'thin'
 set :sockets, []
 set :port, 8000
+set :bind, "0.0.0.0"
 
 get '/' do
   erb :index
