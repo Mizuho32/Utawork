@@ -105,8 +105,10 @@ function on_songname_focus(e) {
 
   console.log(`Start ${raw_time}`);
 
-  player.playVideo();
-  player.seekTo(time, true);
+  if (player !== undefined) {
+    player.playVideo();
+    player.seekTo(time, true);
+  }
 }
 
 function update_video(e) {
