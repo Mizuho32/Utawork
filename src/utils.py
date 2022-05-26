@@ -31,6 +31,13 @@ def sec2time(sec, digit=1):
     elif type(sec) == tuple:
         return repr(tuple(map(lambda n: sec2time(n), sec)))
 
+def time2sec(time):
+    if type(time) in[int, float, np.float64]:
+        return time
+
+    idx_num_pair = enumerate(reversed(list(map(lambda n: int(n), time.split(":")))))
+    return sum(map(lambda i_n: i_n[1]* 60**i_n[0], idx_num_pair))
+
 def resample(wav, orig_sr, dest_sr):
     number_of_samples = int(round(wav.shape[-1] * float(dest_sr) / orig_sr))
     return sps.resample(wav, number_of_samples, axis=1)
