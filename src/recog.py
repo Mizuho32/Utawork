@@ -487,12 +487,21 @@ class Recog:
                 print(ex)
                 raise ex
                 break
+
             cur_abs_mean = np.abs(Recog.slice_wav(self, wav, sr, cur_time, cur_time+duration)).mean()
 
-
             utils.print_judges(judges)
+
             # denoise inference
             judges_d = Recog.judges_denoised(judges, c_result, thres)
+
+            if not judges_d.keys():
+                if interval_plan:
+                    cur_time += interval_plan.pop()
+                else:
+                    cur_time += min_interval
+                continue
+
             cur_judge = judges_d[max(judges_d.keys())] # get most recent State
 
             judgess, c_results, judgess_d = [judges], [c_result], [judges_d]
@@ -822,7 +831,11 @@ class Recog:
 
 
     @classmethod
-    def load_cache(cls, save_dir, load_sr=100, show_mono=True, load_wav=True):
+    def load_cache(cls, save_dir, load_sr=100, show_mono=True, load_wav=True, old_metadata=None):
+
+        if type(load_wav) is list:
+            load_wav = list(map(lambda time: utils.time2sec(time), load_wav))
+
         save_dir = pathlib.Path(save_dir)
 
         with open(save_dir / "metadata.yaml", 'r') as file:
@@ -831,20 +844,42 @@ class Recog:
         for i in range(len(metadata["cache_list"])):
             cache = metadata["cache_list"][i]
 
-            with open(save_dir / cache["data"], 'rb') as file:
-                cache["data"] = pickle.load(file)
+            if old_metadata:
+                cache["data"] = old_metadata["cache_list"][i]["data"]
+            else:
+                with open(save_dir / cache["data"], 'rb') as file:
+                    cache["data"] = pickle.load(file)
 
             filename = metadata["filename"]
 
-            if load_wav:
-                wav, sr = librosa.load(filename, sr=int(load_sr), mono=show_mono, offset=cache["start"], duration=cache["clip_len"])
+
+            if old_metadata and "wav" in old_metadata["cache_list"][i] \
+                    and type(old_metadata["cache_list"][i]["wav"]) == np.ndarray:
+                c = old_metadata["cache_list"][i]
+                wav, sr = c["wav"], c["load_sr"]
+            else:
+                if load_wav == True:
+                    wav, sr = librosa.load(filename, sr=int(load_sr), mono=show_mono, offset=cache["start"], duration=cache["clip_len"])
+                elif type(load_wav) == list and \
+                    any(map(lambda time: cache["start"] <= time and time <= cache["start"]+cache["clip_len"], load_wav)):
+                    print(f'Load {i}-th, {utils.sec2time(cache["start"])} to {utils.sec2time(cache["start"]+cache["clip_len"])}')
+                    wav, sr = librosa.load(filename, sr=int(load_sr), mono=show_mono, offset=cache["start"], duration=cache["clip_len"])
+                else:
+                    wav, sr = None, None
+
+            if type(wav) == np.ndarray and sr != None:
                 cache["wav"] = wav
                 cache["load_sr"] = sr
+
+        for i in range(len(metadata["cache_list"])):
+            cache = metadata["cache_list"][i]
+            if "wav" in cache and type(cache["wav"]) == np.ndarray:
+                print(f'Loaded {i}-th, {utils.sec2time(cache["start"])} to {utils.sec2time(cache["start"]+cache["clip_len"])}')
 
         return metadata
 
     @classmethod
-    def merge_intervals(cls, metadata, big_thres=20, mini_thres=4, gap_thres=1.0):
+    def merge_intervals(cls, metadata, big_thres=20, mini_thres=4, gap_thres=1.0, allow_ill=False):
         itvs = []
         cur_itv = None
 
@@ -856,17 +891,30 @@ class Recog:
                 cur_label  = d_series[cur_time]
                 # print(prev_time, prev_label, State.Music in prev_label)
 
-                # MusicStart -> End or InPro
-                if prev_label.value == (State.Music|State.Start).value and State.Music in cur_label:
+                if State.InProgress in prev_label and State.InProgress in cur_label:
+                    continue
+
+                # non Music -> Music
+                # FIXME: condition should be MusicStart -> End or InPro
+                if prev_label == State.Music|State.Start and State.Music in cur_label or \
+                    (not State.InProgress in prev_label and State.InProgress in cur_label and allow_ill):
+
+                    #if not State.InProgress in prev_label and State.InProgress in cur_label:
+                    #    print(f"Ill interval start at {utils.sec2time(prev_time)} ({prev_time})")
                     cur_itv = [prev_time]
+                    continue
+
 
                 # End
-                if State.Music|State.End == prev_label:
+                #if State.Music|State.End == prev_label:
+                if State.Music|State.End == prev_label or \
+                    (State.InProgress in prev_label and not State.InProgress in cur_label and allow_ill):
                     if type(cur_itv) == list:
                         cur_itv.append(prev_time)
                         itvs.append(tuple(cur_itv))
                         cur_itv = None
 
+        # Filter big intervals
         # [(indev of itvs, (itv)),...]
         big_itvs = list( filter(lambda i_itv: i_itv[1][1] - i_itv[1][0] >= big_thres, enumerate(itvs)) )
         #print("bigs:\n", [(v[0], utils.sec2time(v[1])) for v in  list(big_itvs)])
@@ -896,6 +944,9 @@ class Recog:
 
         return result, itvs
 
+    @classmethod
+    def to_audtxt(cls, itv_ar):
+        return "\n".join(map(lambda itv: "\t".join(map(lambda sec: str(sec), itv)), itv_ar))
 
 
 #M = State.Music
