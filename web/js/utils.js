@@ -50,15 +50,45 @@ function to_num(time) {
     .reduce((el, sum)=>el+sum, 0)
 }
 
+
+// For UI
+
+function touchend(e) {
+  if (player) e.target.value = to_time(player.getCurrentTime());
+  timechange(e, false); // no seek
+}
+
+function timeinput_nonPC(time) {
+  return `
+  <input type="text" value="${time}" onchange="timechange(event);" readonly="readonly" ontouchend="touchend(event);"/>
+  <button class="fa-solid fa-minus" onclick="changetime(event, -1)"></button>
+  <button class="fa-solid fa-plus"  onclick="changetime(event, +1)"></button>
+`;
+}
+
+function gen_input(value) {
+  if (detectMobile()) {
+    return timeinput_nonPC(value);
+  } else {
+    return `<input type="time" value="${value}" onchange="timechange(event);" />`;
+  }
+}
+
 function segment_row(idx, start, end) {
   return `
 <td class="no">${idx}</td>
-<td class="time start"><input type="time" value="${to_time(start)}" onchange="timechange(event);" /></th>
-<td class="time end"><input type="time" value="${to_time(end)}" onchange="timechange(event);" /></th>
-<td class="length">${to_time(end-start)}</th>
-<td class="name"><input type="text" onfocus="on_songname_focus(event);"></input></th>
-<td class="artist"><input type="text"></input></th>`;
+<td class="time start">${ gen_input(to_time(start)) }</td>
+<td class="time end">${   gen_input(to_time(end)) }</td>
+<td class="length">${to_time(end-start)}</td>
+<td class="name">
+  <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
+  <input type="text" onfocus="on_songname_focus(event);"></input>
+</td>
+<td class="artist"><input type="text"></input></td>`;
 }
+
+
+
 
 function load_segments() {
   let table = document.querySelector("#stamps");
@@ -82,7 +112,10 @@ function load_segments() {
     });
 }
 
-function timechange(e) {
+
+// time utils
+function timechange(e, seek=true) {
+  // e.target == input
   let tr = e.target.parentElement.parentElement;
 
   let length = tr.querySelector("td.length");
@@ -95,8 +128,17 @@ function timechange(e) {
 
   length.innerText = to_time(times[0]-times[1]);
 
-  player.seekTo(Math.min(...times), true);
+  if (player && seek) player.seekTo(to_num(e.target.value), true);
 }
+
+function changetime(e, delta) {
+  let td = e.target.parentElement;
+  let input = td.querySelector("input");
+  input.value = to_time(to_num(input.value)+delta);
+  timechange({target: td.querySelector("input")});
+}
+
+
 
 var focused;
 function on_songname_focus(e) {
@@ -117,7 +159,7 @@ function on_songname_focus(e) {
 function update_video(e) {
   let id = url2id(e.target.parentElement.querySelector("input").value);
   console.log(id);
-  
+
   if (player === undefined) {
     player = load_video(id);
   } else {
@@ -135,6 +177,21 @@ function adjacent_row(row, delta) {
   }
 }
 
+
+// Search
+function search(word) {
+  console.log(`search got "${word}"`);
+  if (word !== "") {
+    socket.send(word);
+  }
+}
+
+function search_button(e) {
+  search(e.target.parentElement.querySelector("input").value);
+}
+
+
+
 function apply_tablerow_shortcuts(row) {
   row.addEventListener('keyup', (e) => {
     //console.log(e.target, `Key "${e.key}" released  [event: keyup]`);
@@ -146,8 +203,8 @@ function apply_tablerow_shortcuts(row) {
       } else {
         player.playVideo();
       }
-    } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter
-      socket.send(e.target.value);      
+    } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter -> search word
+      search(e.target.value);
     } else if (e.keyCode == 40 || e.keyCode == 38) { // down or up
       //                         td            tr
       let current_row = e.target.parentElement.parentElement
@@ -182,4 +239,22 @@ function show_output(e) {
 
   document.querySelector("#output_content > textarea").textContent = text;
   console.log(text);
+}
+
+
+function detectMobile() {
+  const toMatch = [
+         /Android/i,
+         /webOS/i,
+         /iPhone/i,
+         /iPad/i,
+         /iPod/i,
+         /Safari/i,
+         /BlackBerry/i,
+         /Windows Phone/i
+   ];
+
+   return toMatch.some((toMatchItem) => {
+     return navigator.userAgent.match(toMatchItem);
+   });
 }
