@@ -40,7 +40,7 @@ get '/' do
   erb :index, locals: {
     :css =>  is_mobile ? "mobile.css" : "style.css",
     is_mobile: is_mobile,
-    search: erb(:search),
+    search: erb(:search, locals: {is_mobile: is_mobile}),
     table: erb(:table, locals: {is_mobile: is_mobile})
   }
 end
