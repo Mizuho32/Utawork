@@ -35,7 +35,7 @@ div#segments_content {
 }
 div#player_container {
   width: 100%;
-  height: 30%;
+  height: 20%;
   overflow: scroll;
 }
 div#player {
@@ -47,7 +47,11 @@ input#video_url {
   box-sizing: border-box;
 }
 
-div#search {
+
+div#info {
+  display: flex;
+  flex-direction: column;
+
   /* for overlay */
   position: absolute;
   top: 90%;
@@ -56,6 +60,12 @@ div#search {
   height: 10%;
   overflow: scroll;
   background-color: #AACCFF;
+
+}
+div.load_video {
+  display: flex;
+  flex-wrap: nowrap;
+  flex-direction: row;
 }
 
 
@@ -86,12 +96,13 @@ td {
 div.time {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* time input styles */
 div.time_input > input {
   width: 4em;
+  font-size: medium;
 }
 div.time_buttons {
   display: flex;

@@ -1,8 +1,35 @@
-<div id="search">
-  <div>
-    <li>1. "YouTube video URL"対象YouTubeビデオのURL貼り付けて、ロード</li>
-    <li>2. "Load raw times data"に "開始時刻 終了時刻... (改行区切り)"のテキストを貼り付け、Loadボタン押下</li>
-    <li>3. "Tag the songs"で各区間の曲名を入力。"Song name"のテキストフォームに任意の言葉入力した状態でCtrl+Enterで検索も可能。</li>
-    <li>4. "Output"でYouTubeコメント貼り付け用テキスト生成。</li>
+<% if is_mobile then %>
+<div id="info">
+  <div id="info_toggle" style="text-align: center;" ontouchend="info_toggle(event);">
+    <i class="fa-solid fa-angles-up"></i>
+  </div>
+  <div class="load_video">
+    <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
+    <button id="load_video" class="fa-brands fa-youtube" onclick="update_video(event);"></button>
+  </div>
+  <div id="search">
+    <div>
+      <li>1. "YouTube video URL"対象YouTubeビデオのURL貼り付けて、ロード</li>
+      <li>2. "Load raw times data"に "開始時刻 終了時刻... (改行区切り)"のテキストを貼り付け、Loadボタン押下</li>
+      <li>3. "Tag the songs"で各区間の曲名を入力。"Song name"のテキストフォームに任意の言葉入力した状態でCtrl+Enterで検索も可能。</li>
+      <li>4. "Output"でYouTubeコメント貼り付け用テキスト生成。</li>
+    </div>
   </div>
 </div>
+<% else %>
+<div id="info">
+  <div class="load_video">
+    <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
+    <button id="load_video" class="fa-brands fa-youtube" onclick="update_video(event);"></button>
+  </div>
+  <div id="search">
+      <div>
+        <li>1. "YouTube video URL"対象YouTubeビデオのURL貼り付けて、ロード</li>
+        <li>2. "Load raw times data"に "開始時刻 終了時刻... (改行区切り)"のテキストを貼り付け、Loadボタン押下</li>
+        <li>3. "Tag the songs"で各区間の曲名を入力。"Song name"のテキストフォームに任意の言葉入力した状態でCtrl+Enterで検索も可能。</li>
+        <li>4. "Output"でYouTubeコメント貼り付け用テキスト生成。</li>
+      </div>
+    </div>
+  </div>
+</div>
+<% end %>
