@@ -33,9 +33,8 @@ function playVideo() {
 
 
 let table = document.querySelector("#stamps");
-for (let i = 0; i < 0; i++) {
-  let new_row = table.insertRow(-1);
-  new_row.innerHTML = segment_row(i, 0, 200);
+for (let i = 0; i < 10; i++) {
+  insert_row(table, i, 20, 200);
 }
 
 /*$(function(){

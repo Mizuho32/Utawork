@@ -3,7 +3,10 @@
   <head>
       <title>timestamp tagger</title>
       <meta charset="utf-8">
-      <link href="css/style.css" type="text/css" rel="stylesheet">
+      <meta name="viewport" content="width=device-width">
+
+      <link href="css/<%= css %>" type="text/css" rel="stylesheet" />
+
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
@@ -14,7 +17,7 @@
         <div id="player_container">
           <div id="player"></div>
           <div>
-            <input id="video_url" type="text" value="" placeholder="YouTube video URL"></input>
+            <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
             <button id="load_video" onclick="update_video(event);">Load video</input>
           </div>
         </div>
@@ -28,7 +31,7 @@
             <label class="tab_item" for="output">Output</label>
 
           <div class="tab_content" id="segments_content">
-            <table class="tablecss">
+            <!--<table class="tablecss">
               <thead>
                 <tr>
                 <th class="no">No.</th>
@@ -40,7 +43,8 @@
                 </tr>
               </thead>
               <tbody id="stamps"></tbody>
-            </table>
+            </table>-->
+            <%= table %>
           </div>
           <div class="tab_content" id="raw_times_content">
             <textarea id="raw_times_input"></textarea>
@@ -50,16 +54,10 @@
             <textarea></textarea>
           </div>
         </div>
+
       </div>
 
-      <div id="search">
-        <div>
-          <li>1. "YouTube video URL"対象YouTubeビデオのURL貼り付けて、ロード</li>
-          <li>2. "Load raw times data"に "開始時刻 終了時刻... (改行区切り)"のテキストを貼り付け、Loadボタン押下</li>
-          <li>3. "Tag the songs"で各区間の曲名を入力。"Song name"のテキストフォームに任意の言葉入力した状態でCtrl+Enterで検索も可能。</li>
-          <li>4. "Output"でYouTubeコメント貼り付け用テキスト生成。</li>
-        </div>
-      </div>
+      <%= search  %>
     </div>
     <!--<button onclick="playVideo()">start</button>-->
 

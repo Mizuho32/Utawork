@@ -36,10 +36,11 @@ function load_video(id) {
   })
 }
 
-function to_time(num) {
+function to_time(num, digit=3) {
   let date = new Date(0);
   date.setSeconds(num);
-  return date.toISOString().substr(11, 8);
+  let offset = (3-digit)*3; // 3 is e.g. hh:, mm:
+  return date.toISOString().substr(11 + offset, 8-offset);
 }
 
 function to_num(time) {
@@ -58,33 +59,80 @@ function touchend(e) {
   timechange(e, false); // no seek
 }
 
-function timeinput_nonPC(time) {
-  return `
-  <input type="text" value="${time}" onchange="timechange(event);" readonly="readonly" ontouchend="touchend(event);"/>
-  <button class="fa-solid fa-minus" onclick="changetime(event, -1)"></button>
-  <button class="fa-solid fa-plus"  onclick="changetime(event, +1)"></button>
+function timeinput_nonPC(time, is_start) {
+  let startend = is_start ? "start" : "end";
+  let time_input = `
+  <div class="time_input">
+    <input type="text" class="time ${startend}" value="${time}" onchange="timechange(event);" readonly="readonly" ontouchend="touchend(event);"/>
+    <div class="time_buttons">
+      <button class="fa-solid fa-minus" onclick="changetime(event, -1)"></button>
+      <button class="fa-solid fa-plus"  onclick="changetime(event, +1)"></button>
+    </div>
+  </div>
 `;
-}
-
-function gen_input(value) {
-  if (detectMobile()) {
-    return timeinput_nonPC(value);
+  if (is_start) {
+    return `
+    ${time_input}
+    <button class="fa-solid fa-angles-left"></button>`;
   } else {
-    return `<input type="time" value="${value}" onchange="timechange(event);" />`;
+    return `
+    <button class="fa-solid fa-angles-right"></button>
+    ${time_input}
+    `;
   }
 }
 
+function gen_timeinput(value, is_start=true) {
+  if (detectMobile()) {
+    return timeinput_nonPC(value, is_start);
+  } else {
+    let startend = is_start ? "start" : "end";
+    return `<input type="time" class="time ${startend}" value="${value}" onchange="timechange(event);" />`;
+  }
+}
+
+function insert_row(table, idx, start, end) {
+  let new_row = table.insertRow(-1);
+  new_row.setAttribute("class", "item");
+  new_row.innerHTML = segment_row(idx, start, end);
+  return new_row;
+}
+
 function segment_row(idx, start, end) {
-  return `
+  if (is_mobile_html()) {
+    return `
 <td class="no">${idx}</td>
-<td class="time start">${ gen_input(to_time(start)) }</td>
-<td class="time end">${   gen_input(to_time(end)) }</td>
-<td class="length">${to_time(end-start)}</td>
+<td class="item">
+<table>
+  <tr>
+    <td><label class="start">Start time</label></td>
+    <td><label class="ldngth">Length</label></td>
+    <td><label class="end">End time</label></td>
+  </tr>
+  <tr>
+    <td><div class="time start">${ gen_timeinput(to_time(start)) }</div></td>
+    <td><div class="length">${to_time(end-start, 2)}</div></td>
+    <td><div class="time end">${   gen_timeinput(to_time(end), false) }</div></td>
+  </tr>
+</table>
+  <div class="name">
+    <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
+    <input type="text" onfocus="on_songname_focus(event);" placeholder="Song name"></input>
+  </div>
+  <div class="artist"><input type="text" placeholder="Artist"></input></div>
+</td>`;
+  } else {
+    return `
+<td class="no">${idx}</td>
+<td class="time start">${ gen_timeinput(to_time(start)) }</td>
+<td class="time end">${   gen_timeinput(to_time(end), false) }</td>
+<td class="length">${to_time(end-start, 2)}</td>
 <td class="name">
   <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
   <input type="text" onfocus="on_songname_focus(event);"></input>
 </td>
 <td class="artist"><input type="text"></input></td>`;
+  }
 }
 
 
@@ -102,10 +150,7 @@ function load_segments() {
 
       let times = row.split(/\s+/).map(n=>parseInt(n));
       if (times.length == 2) {
-        let row_html = segment_row(i, ...times);
-
-        let new_row = table.insertRow(-1);
-        new_row.innerHTML = row_html;
+        let new_row = insert_row(table, i, ...times);
         apply_tablerow_shortcuts(new_row);
       }
 
@@ -116,26 +161,26 @@ function load_segments() {
 // time utils
 function timechange(e, seek=true) {
   // e.target == input
-  let tr = e.target.parentElement.parentElement;
+  let item = e.target.closest(".item");
 
-  let length = tr.querySelector("td.length");
-  let times = Array.from(tr.querySelectorAll("td.time > input"))
+  let length = item.querySelector(".length");
+  let times = Array.from(item.querySelectorAll("input.time"))
     .map(time_input=>to_num(time_input.value))
     .sort((l,r)=>l-r).reverse();
 
   //console.log(times);
   //console.log(times.map(x=>to_time(x)));
 
-  length.innerText = to_time(times[0]-times[1]);
+  length.innerText = to_time(times[0]-times[1], 2);
 
   if (player && seek) player.seekTo(to_num(e.target.value), true);
 }
 
 function changetime(e, delta) {
-  let td = e.target.parentElement;
-  let input = td.querySelector("input");
+  let cntner = e.target.closest(".time");
+  let input = cntner.querySelector("input");
   input.value = to_time(to_num(input.value)+delta);
-  timechange({target: td.querySelector("input")});
+  timechange({target: input});
 }
 
 
@@ -143,8 +188,8 @@ function changetime(e, delta) {
 var focused;
 function on_songname_focus(e) {
   if (e.target != focused) {
-    let tr = e.target.parentElement.parentElement;
-    let raw_time = tr.querySelector("td.time.start > input").value;
+    let tr = e.target.closest(".item");
+    let raw_time = tr.querySelector("input.time.start").value;
     let time = to_num(raw_time);
     focused = e.target;
 
@@ -242,19 +287,34 @@ function show_output(e) {
 }
 
 
+let mobile = undefined;
 function detectMobile() {
-  const toMatch = [
-         /Android/i,
-         /webOS/i,
-         /iPhone/i,
-         /iPad/i,
-         /iPod/i,
-         /Safari/i,
-         /BlackBerry/i,
-         /Windows Phone/i
-   ];
+  if (mobile === undefined) {
+    const toMatch = [
+           /Android/i,
+           /webOS/i,
+           /iPhone/i,
+           /iPad/i,
+           /iPod/i,
+           /Safari/i,
+           /BlackBerry/i,
+           /Windows Phone/i
+     ];
 
-   return toMatch.some((toMatchItem) => {
-     return navigator.userAgent.match(toMatchItem);
-   });
+     mobile = toMatch.some((toMatchItem) => {
+       return navigator.userAgent.match(toMatchItem);
+     });
+  }
+
+  return mobile;
+}
+
+let mobile_html = undefined;
+function is_mobile_html() {
+  if (mobile_html === undefined) {
+    let tbody = document.querySelector("#stamps");
+    mobile_html = tbody.parentElement.querySelectorAll("th").length === 2;
+  }
+
+  return mobile_html;
 }

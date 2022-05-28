@@ -36,7 +36,13 @@ set :port, 8000
 set :bind, "0.0.0.0"
 
 get '/' do
-  erb :index
+  is_mobile = params.key?("mobile")
+  erb :index, locals: {
+    :css =>  is_mobile ? "mobile.css" : "style.css",
+    is_mobile: is_mobile,
+    search: erb(:search),
+    table: erb(:table, locals: {is_mobile: is_mobile})
+  }
 end
 
 get '/websocket' do
