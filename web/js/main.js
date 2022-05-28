@@ -63,10 +63,6 @@ socket.onopen = function(e) {
 
 socket.onmessage = function(event) {
   document.querySelector('#search > div').innerHTML = event.data;
-
-  //setTimeout(()=>{
-  //  socket.close();
-  //  location.reload();
-  //}, reload_time*1000);
+  if (is_mobile_html()) toggle_info(true);
 };
 

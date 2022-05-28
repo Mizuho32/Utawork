@@ -350,15 +350,17 @@ function toggle_info(open, info, i) {
   if (!info) info = document.querySelector("#info");
   if (!i) i = info.querySelector("i");
 
-  if (open) {
-    info.style.top    = "10%";
-    info.style.height = "90%";
-    i.setAttribute("class", "fa-solid fa-angles-down");
-  } else {
-    info.style.top    = "";
-    info.style.height = "";
-    i.setAttribute("class", "fa-solid fa-angles-up");
-  }
+  setTimeout(()=>{
+    if (open) {
+      info.style.top    = "10%";
+      info.style.height = "90%";
+      i.setAttribute("class", "fa-solid fa-angles-down");
+    } else {
+      info.style.top    = "";
+      info.style.height = "";
+      i.setAttribute("class", "fa-solid fa-angles-up");
+    }
+  }, 150);
 }
 
 let moving = false;
