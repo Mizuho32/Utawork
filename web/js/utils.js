@@ -25,9 +25,11 @@ function onPlayerStateChange(event) {
 
 function load_video(id) {
   console.log(`load video ${id}`);
+  let width = is_mobile_html() ? screen.width : screen.width / 2;
+  let height = is_mobile_html() ? screen.height*0.2 : screen.height *0.5;
   return new YT.Player('player', {
-    /*height: '360',
-    width: '640',*/
+    height: String(height),
+    width:  String(width),
     videoId: id,
     events: {
       'onReady': onPlayerReady,
@@ -73,10 +75,10 @@ function timeinput_nonPC(time, is_start) {
   if (is_start) {
     return `
     ${time_input}
-    <button class="fa-solid fa-angles-left"></button>`;
+    <button class="fa-solid fa-backward-step" ontouchend="seek_to(event);"></button>`;
   } else {
     return `
-    <button class="fa-solid fa-angles-right"></button>
+    <button class="fa-solid fa-forward-step"  ontouchend="seek_to(event);"></button>
     ${time_input}
     `;
   }
@@ -183,6 +185,15 @@ function changetime(e, delta) {
   timechange({target: input});
 }
 
+function seek_to(e) {
+  let sec = to_num(e.target.closest(".time").querySelector("input.time").value);
+  //console.log("seek_to", {sec});
+  if (player) {
+    player.seekTo(sec);
+    player.playVideo();
+  }
+}
+
 
 
 var focused;
@@ -287,6 +298,8 @@ function show_output(e) {
 }
 
 
+
+// mobile judge
 let mobile = undefined;
 function detectMobile() {
   if (mobile === undefined) {
@@ -317,4 +330,29 @@ function is_mobile_html() {
   }
 
   return mobile_html;
+}
+
+
+// For info pane toggle
+function info_toggle(e) {
+  let i = e.currentTarget.querySelector("i")
+  let to_expand = i.getAttribute("class").match(/up/i);
+  let info = e.target.closest("#info");
+
+  toggle_info(to_expand, info, i);
+}
+
+function toggle_info(open, info, i) {
+  if (!info) info = document.querySelector("#info");
+  if (!i) i = info.querySelector("i");
+
+  if (open) {
+    info.style.top    = "10%";
+    info.style.height = "90%";
+    i.setAttribute("class", "fa-solid fa-angles-down");
+  } else {
+    info.style.top    = "";
+    info.style.height = "";
+    i.setAttribute("class", "fa-solid fa-angles-up");
+  }
 }
