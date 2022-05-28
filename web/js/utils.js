@@ -335,11 +335,15 @@ function is_mobile_html() {
 
 // For info pane toggle
 function info_toggle(e) {
-  let i = e.currentTarget.querySelector("i")
-  let to_expand = i.getAttribute("class").match(/up/i);
-  let info = e.target.closest("#info");
+  if (!moving) {
+    let i = e.currentTarget.querySelector("i")
+    let to_expand = i.getAttribute("class").match(/up/i);
+    let info = e.target.closest("#info");
 
-  toggle_info(to_expand, info, i);
+    toggle_info(to_expand, info, i);
+  } else {
+    moving = false;
+  }
 }
 
 function toggle_info(open, info, i) {
@@ -355,4 +359,9 @@ function toggle_info(open, info, i) {
     info.style.height = "";
     i.setAttribute("class", "fa-solid fa-angles-up");
   }
+}
+
+let moving = false;
+function info_move(e) {
+  moving = true;
 }
