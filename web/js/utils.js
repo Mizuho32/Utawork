@@ -117,9 +117,9 @@ function segment_row(idx, start, end) {
 </table>
   <div class="name">
     <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
-    <input type="text" onfocus="on_songname_focus(event);" placeholder="Song name"></input>
+    <input type="text" class="name" onfocus="on_songname_focus(event);" placeholder="Song name"></input>
   </div>
-  <div class="artist"><input type="text" placeholder="Artist"></input></div>
+  <div class="artist"><input type="text" class="artist" placeholder="Artist"></input></div>
 </td>`;
   } else {
     return `
@@ -129,9 +129,9 @@ function segment_row(idx, start, end) {
 <td class="length">${to_time(end-start, 2)}</td>
 <td class="name">
   <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
-  <input type="text" onfocus="on_songname_focus(event);"></input>
+  <input type="text" class="name" onfocus="on_songname_focus(event);"></input>
 </td>
-<td class="artist"><input type="text"></input></td>`;
+<td class="artist"><input type="text" class="artist"></input></td>`;
   }
 }
 
@@ -266,12 +266,12 @@ function show_output(e) {
   let table = document.querySelector("#stamps");
   let text = Array.from(table.rows)
     .map(row => {
-      let name = row.querySelector("td.name > input[type='text']").value;
-      let artist = row.querySelector("td.artist > input[type='text']").value;
+      let name = row.querySelector("input.name").value;
+      let artist = row.querySelector("input.artist").value;
 
       if (!name && !artist) { return ""; }
 
-      let times = Array.from(row.querySelectorAll("td.time > input"))
+      let times = Array.from(row.querySelectorAll("input.time"))
         .map(time_input=>to_num(time_input.value))
         .sort((l,r)=>l-r)
         .map(n=>to_time(n))
