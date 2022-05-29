@@ -17,26 +17,11 @@ div.leftside {
   flex-direction: column;
 }
 
-div.tabs {
-  height: 50%;
-}
-div.tab_content {
-  height: 100%;
-}
 
-#seg_wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
+
+
 div#table_wrapper {
   overflow: scroll;
-}
-#raw_times_content > textarea, #output_content > textarea {
-  margin: 0; 
-  padding: 0; 
-  height:90%;
-  width: 100%;
 }
 
 div#player_container {
@@ -80,40 +65,4 @@ th {
 td {
   border: solid #000000 1px;
   background-color: #EEEEEE;
-}
-
-
-
-/* # Tab
-https://bagelee.com/design/css/create_tabs_using_only_css/
-*/
-
-.tab_item:hover {
-  opacity: 0.75;
-}
-
-/*ラジオボタンを全て消す*/
-input[name="tab_item"] {
-  display: none;
-}
-
-/*タブ切り替えの中身のスタイル*/
-.tab_content {
-  display: none;
-  /*padding: 40px 40px 0;*/
-  clear: both;
-  overflow: hidden;
-}
-
-/*選択されているタブのコンテンツのみを表示*/
-#segments:checked ~ #segments_content,
-#output:checked ~ #output_content,
-#raw_times:checked ~ #raw_times_content {
-  display: block;
-}
-
-/*選択されているタブのスタイルを変える*/
-.tabs input:checked + .tab_item {
-  background-color: #5ab4bd;
-  color: #fff;
 }

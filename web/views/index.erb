@@ -21,14 +21,17 @@
 
         <div class="tabs">
           <input id="raw_times" type="radio" name="tab_item" checked>
-            <label class="tab_item" for="raw_times">Load raw times data |</label>
-          <input id="segments" type="radio" name="tab_item">
-            <label class="tab_item" for="segments">Tag the songs |</label>
-          <input id="output" type="radio" name="tab_item" onclick="show_output(event);">
-            <label class="tab_item" for="output">Output</label>
+          <input id="segments"  type="radio" name="tab_item">
+          <input id="output"    type="radio" name="tab_item" onclick="show_output(event);">
+
+          <div class="tabbar">
+            <div class="tab_item"> <label class="tab_item" for="raw_times">Load raw times data |</label> </div>
+            <div class="tab_item"> <label for="segments">Tag the songs |</label> </div>
+            <div class="tab_item"> <label for="output">Output</label> </div>
+          </div>
 
           <div class="tab_content" id="segments_content">
-            <div id="seg_wrapper">
+            <div id="seg_wrapper" class="content_wrapper">
             <% if not is_mobile then %>
               <div class="uis">
                 <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
@@ -38,14 +41,16 @@
                 <button id="sort_item" class="fa-solid fa-sort" style="height: 100%;" onclick="sort_item();"></button>
               </div>
             <% end %>
-            <div id="table_wrapper">
-              <%= table %>
-            </div>
+              <div id="table_wrapper">
+                <%= table %>
+              </div>
             </div>
           </div>
           <div class="tab_content" id="raw_times_content">
-            <textarea id="raw_times_input"></textarea>
-            <button id="raw_times_btn" onclick="load_segments(event);">Load</input>
+            <div id="seg_wrapper" class="content_wrapper">
+              <textarea id="raw_times_input"></textarea>
+              <button id="raw_times_btn" onclick="load_segments(event);">Load</input>
+            </div>
           </div>
           <div class="tab_content" id="output_content">
             <textarea></textarea>
