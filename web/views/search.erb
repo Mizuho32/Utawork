@@ -1,18 +1,30 @@
 <% if is_mobile then %>
 <div id="info">
-  <div id="info_toggle" style="text-align: center;" ontouchend="info_toggle(event);" ontouchmove="info_move(event);">
-    <i class="fa-solid fa-angles-up"></i>
+  <div class="uis">
+    <button id="delete_item" class="fa-solid fa-trash" onclick="delete_item_handle(event);"></button>
+    <button id="info_toggle" style="text-align: center;" ontouchend="info_toggle(event);" ontouchmove="info_move(event);">
+      <i class="fa-solid fa-angles-up"></i>
+    </button>
+    <div>
+      <button id="add_item"  class="fa-solid fa-plus" style="height: 100%;" onclick="add_item(event);"></button>
+      <button id="sort_item" class="fa-solid fa-sort" style="height: 100%;" onclick="sort_item();"></button>
+    </div>
   </div>
+
   <div class="load_video">
     <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
     <button id="load_video" class="fa-brands fa-youtube" onclick="update_video(event);"></button>
   </div>
+
   <div id="search">
     <div>
-      <li>1. "YouTube video URL"対象YouTubeビデオのURL貼り付けて、ロード</li>
-      <li>2. "Load raw times data"に "開始時刻 終了時刻... (改行区切り)"のテキストを貼り付け、Loadボタン押下</li>
-      <li>3. "Tag the songs"で各区間の曲名を入力。"Song name"のテキストフォームに任意の言葉入力した状態でCtrl+Enterで検索も可能。</li>
-      <li>4. "Output"でYouTubeコメント貼り付け用テキスト生成。</li>
+      <li>1. ↑から動画をロード</li>
+      <li>2. "Load raw times data"に 時刻データ(<i>開始時刻 終了時刻</i>)を貼り付け、Load</li>
+      <li>3. "Tag the songs"で各区間の曲名を入力</li>
+      <ul style="margin-top: 0px;margin-bottom: 0px;">
+        <li>3.5. 時刻をタップして、動画の現在時刻を反映</li>
+      </ul>
+      <li>4. "Output"でYouTubeコメント生成</li>
     </div>
   </div>
 </div>
