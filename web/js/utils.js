@@ -1,7 +1,7 @@
 function url2id(url) {
 
   if (url.includes("youtube")) {
-    return url.match(/v=([^=&]+)/)[1]
+    return url.match(/(?:v=|\.be\/)([^=&\/]+)/i)[1]
   }
 
   return url; // looks id
@@ -73,7 +73,7 @@ function search(word) {
     let socket = new WebSocket(`ws://${location.host}/websocket`);
 
     socket.onopen = function(e) {
-      socket.send(word);
+      socket.send(JSON.stringify({search: word}));
     };
 
     socket.onmessage = function(event) {
