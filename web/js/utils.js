@@ -94,6 +94,8 @@ function gen_timeinput(value, is_start=true) {
 }
 
 function insert_row(table, idx, start, end) {
+  if (idx < 0) idx = table.rows.length;
+
   let new_row = table.insertRow(-1);
   new_row.setAttribute("class", "item");
   new_row.innerHTML = segment_row(idx, start, end);
@@ -103,7 +105,13 @@ function insert_row(table, idx, start, end) {
 function segment_row(idx, start, end) {
   if (is_mobile_html()) {
     return `
-<td class="no">${idx}</td>
+<td class="no">
+  <div>
+  <label style="text-align: center;" >${idx}</label>
+  <input type="checkbox"></input>
+  <i class="fa-solid fa-trash" style="text-align: center;" ></i>
+  </div>
+</td>
 <td class="item">
 <table>
   <tr>
@@ -237,8 +245,20 @@ function adjacent_row(row, delta) {
 // Search
 function search(word) {
   console.log(`search got "${word}"`);
+
   if (word !== "") {
-    socket.send(word);
+    let socket = new WebSocket(`ws://${location.host}/websocket`);
+
+    socket.onopen = function(e) {
+      socket.send(word);
+    };
+
+    socket.onmessage = function(event) {
+      document.querySelector('#search > div').innerHTML = event.data;
+      if (is_mobile_html()) toggle_info(true);
+      socket.close();
+    };
+
   }
 }
 
@@ -366,4 +386,25 @@ function toggle_info(open, info, i) {
 let moving = false;
 function info_move(e) {
   moving = true;
+}
+
+function add_item(e) {
+  let table = document.querySelector("#stamps");
+  let newone = insert_row(table, -1, 0, 0);
+  let y = newone.getBoundingClientRect().bottom;
+  table.closest("#segments_content").scrollBy(0, y);
+}
+
+function delete_item_handle(e) {
+  if (confirm("選択した項目を削除します")) {
+    delete_item(e);
+  }
+}
+
+function delete_item(e) {
+    let table = document.querySelector("#stamps");
+    for (let i=0, row; row = table.rows[i]; i++){
+      if (row.querySelector("input[type='checkbox']").checked)
+        row.remove();
+    }
 }

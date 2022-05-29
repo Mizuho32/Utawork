@@ -50,19 +50,8 @@ for (let i = 0; i < 10; i++) {
 	});
 });*/
 
-let socket = new WebSocket(`ws://${location.host}/websocket`);
 for (var i = 0, row; row = table.rows[i]; i++) {
   //console.log(row);
 	//row.querySelector("td.start").addEventListener('change', timechange);
   apply_tablerow_shortcuts(row);
 }
-
-
-socket.onopen = function(e) {
-};
-
-socket.onmessage = function(event) {
-  document.querySelector('#search > div').innerHTML = event.data;
-  if (is_mobile_html()) toggle_info(true);
-};
-
