@@ -22,10 +22,11 @@ function timeinput_nonPC(time, is_start) {
 }
 
 function gen_timeinput(value, is_start=true) {
+  let startend = is_start ? "start" : "end";
   if (detectMobile()) {
-    return timeinput_nonPC(value, is_start);
+    let div = `<div class="time ${startend}">`;
+    return `${div}${timeinput_nonPC(value, is_start)}</div>`;
   } else {
-    let startend = is_start ? "start" : "end";
     return `<input type="time" class="time ${startend}" value="${value}" onchange="timechange(event);" />`;
   }
 }
@@ -51,9 +52,9 @@ ${no_col}
     <td><label class="end">End time</label></td>
   </tr>
   <tr>
-    <td><div class="time start">${ gen_timeinput(to_time(start)) }</div></td>
+    <td>${ gen_timeinput(to_time(start)) }</td>
     <td><div class="length">${to_time(end-start, 2)}</div></td>
-    <td><div class="time end">${   gen_timeinput(to_time(end), false) }</div></td>
+    <td>${ gen_timeinput(to_time(end), false) }</td>
   </tr>
 </table>
   <div class="name">

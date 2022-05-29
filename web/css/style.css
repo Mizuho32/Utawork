@@ -66,3 +66,20 @@ td {
   border: solid #000000 1px;
   background-color: #EEEEEE;
 }
+
+/* time input style */
+div.time {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+input.time {
+  width: 4em;
+  font-size: medium;
+}
+div.time_buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
