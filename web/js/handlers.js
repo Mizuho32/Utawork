@@ -13,7 +13,7 @@ function apply_tablerow_shortcuts(row) {
       search(e.target.value);
     } else if (e.keyCode == 40 || e.keyCode == 38 || e.keyCode == 9) { // down or up
 
-      let current_row = e.target.closest("tr");
+      let current_row = e.target.closest("tr.item");
       let delta = e.keyCode == 40 || (e.keyCode == 9 && !e.shiftKey) ? 1 : -1;
       let target_row = adjacent_row(current_row, delta);
       //console.log(target_row);
@@ -80,16 +80,18 @@ function seek_to(e) {
 
 
 
-function load_segments() {
+function load_segments(txt) {
   let table = document.querySelector("#stamps");
-  if ( !(table.rows.length > 0 && confirm("すでに読み込み済みです。\n上書きしますか?")) )
+  if ( table.rows.length > 0 && !confirm("すでに読み込み済みです。\n上書きしますか?") )
     return;
 
   for (;table.rows[0];)
     table.deleteRow(0);
 
-  let area = document.querySelector("#raw_times_input");
-  area.value
+  let text = txt;
+  if (text === undefined) text = document.querySelector("#raw_times_input").value;
+
+  text
     .split("\n")
     .forEach((row,i)=>{
 
@@ -134,6 +136,52 @@ function search_button(e) {
   search(e.target.parentElement.querySelector("input").value);
 }
 
+function upload_tags(e) {
+
+  let table = document.querySelector("#stamps");
+  let ar = Array.from(table.rows)
+    .map(row => {
+      let name = row.querySelector("input.name").value;
+      let artist = row.querySelector("input.artist").value;
+
+      if (!name && !artist) { return ""; }
+
+      let times = Array.from(row.querySelectorAll("input.time"))
+        .map(time_input=>to_num(time_input.value))
+        .sort((l,r)=>l-r)
+        .map(n=>to_time(n))
+
+      return [...times, name||"", artist||""]
+    })
+    .filter(row=>row[2] || row[3]);
+
+
+  // send
+  let socket = new WebSocket(`ws://${location.host}/websocket`);
+  socket.onopen = function(e) {
+    let tags = JSON.stringify(ar);
+    socket.send(
+      JSON.stringify({tags: tags, video_id: url2id(document.querySelector("#video_url").value)}) );
+  };
+
+  let timeout_id = setTimeout(()=>{
+    socket.close();
+    alert("アップロードがタイムアウトしました");
+  }, 5*1000);
+
+  socket.onmessage = function(event) {
+    clearTimeout(timeout_id);
+    let num = parseInt(event.data);
+    if (num == ar.length) {
+      alert("アップロード完了");
+    } else {
+      alert(`Error: ${event.data}`);
+    }
+
+    socket.close();
+  };
+}
+
 function show_output(e) {
   let table = document.querySelector("#stamps");
   let text = Array.from(table.rows)
@@ -154,7 +202,7 @@ function show_output(e) {
     .filter(row=>row)
     .join("\n");
 
-  document.querySelector("#output_content > textarea").textContent = text;
+  document.querySelector("#tags").textContent = text;
   console.log(text);
 }
 
