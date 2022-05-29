@@ -77,12 +77,30 @@ function search(word) {
     };
 
     socket.onmessage = function(event) {
-      document.querySelector('#search > div').innerHTML = event.data;
+      let div = document.querySelector('#search > div')
+      div.innerHTML = event.data;
+      div.querySelectorAll("a").forEach(a=>{
+        a.removeAttribute("href");
+        a.setAttribute("tabindex", "-1");
+      });
+
       if (is_mobile_html()) toggle_info(true);
       socket.close();
     };
 
   }
+}
+
+function escapeRegex(string) {
+      return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+function extractWord(word, html) {
+  let initial = html.indexOf(word);
+  let subst = html.substring(initial-50, initial-1) + html.substring(initial, initial+50);
+  let nonsymbols = "[^-!$%^&*()_+|~=\`{}\\[\\]:\\\";'<>?,.\\/ ]";
+
+  return subst.match(`(${nonsymbols}*${escapeRegex(word)}${nonsymbols}*)`)?.[1] || "";
 }
 
 

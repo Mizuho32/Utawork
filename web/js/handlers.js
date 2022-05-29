@@ -39,6 +39,35 @@ function apply_tablerow_shortcuts(row) {
   });
 }
 
+let state = {last_timeout: undefined, is_composing: undefined, last_ext: ""};
+function extract_word(e) {
+  state.is_composing = e.isComposing;
+  if (!e.target.value) return;
+
+  //console.log(e.target.value);
+  if (state.last_timeout !== undefined) {
+    clearTimeout(state.last_timeout);
+  }
+
+  state.last_timeout = setTimeout(()=>{
+    if (!state.is_composing) { // safe to overwrite value
+      let ext = extractWord(e.target.value, document.querySelector('#search > div').innerHTML);
+
+      // For the case ext is too long (e.g. "坂本真綾の曲")
+      if (ext == state.last_ext && ext.includes(e.target.value) && ext != e.target.value) {
+        state.last_ext = "";
+        return;
+      }
+
+      if (ext.includes(e.target.value)) {
+        e.target.value = ext;
+        state.last_ext = ext;
+      }
+    }
+    state.last_timeout = undefined;
+  }, 1000);
+}
+
 function touchend(e) {
   if (player) e.target.value = to_time(player.getCurrentTime());
   timechange(e, false); // no seek

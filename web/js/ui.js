@@ -59,9 +59,9 @@ ${no_col}
 </table>
   <div class="name">
     <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
-    <input type="text" class="name" onfocus="on_songname_focus(event);" placeholder="Song name"></input>
+    <input type="text" class="name" onfocus="on_songname_focus(event);" oninput="extract_word(event);" placeholder="Song name"></input>
   </div>
-  <div class="artist"><input type="text" class="artist" placeholder="Artist"></input></div>
+  <div class="artist"><input type="text" class="artist" placeholder="Artist" oninput="extract_word(event);"></input></div>
 </td>`;
   } else {
     return `
@@ -71,9 +71,9 @@ ${no_col}
 <td class="length">${to_time(end-start, 2)}</td>
 <td class="name">
   <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
-  <input type="text" class="name" onfocus="on_songname_focus(event);"></input>
+  <input type="text" class="name" onfocus="on_songname_focus(event);" oninput="extract_word(event);" ></input>
 </td>
-<td class="artist"><input type="text" class="artist"></input></td>`;
+<td class="artist"><input type="text" class="artist" oninput="extract_word(event);"></input></td>`;
   }
 }
 
