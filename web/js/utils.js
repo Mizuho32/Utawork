@@ -141,10 +141,14 @@ function toggle_info(open, info, i) {
 
 function delete_item(e) {
     let table = document.querySelector("#stamps");
+    let deletes = [];
     for (let i=0, row; row = table.rows[i]; i++){
-      if (row.querySelector("input[type='checkbox']").checked)
-        row.remove();
+      if (row.querySelector("input[type='checkbox']").checked) {
+        //console.log("delete", row);
+        deletes.push(row);
+      }
     }
+    deletes.reverse().forEach(row=>row.remove());
 
     sort_item();
 }
