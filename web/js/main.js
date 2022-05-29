@@ -21,9 +21,17 @@ function playVideo() {
 }
 
 
-let table = document.querySelector("#stamps");
-let len = 10;
-for (let i = 0; i < len; i++) {
-  let s = (len-i)*10;
-  insert_row(table, i, s, s+180);
-}
+window.onload = ()=>{
+  let times = document.querySelector("#raw_times_input").textContent;
+  if (times) {
+    load_segments(times);
+    document.querySelector("#segments").checked = true;
+  } else {
+    let table = document.querySelector("#stamps");
+    let len = 10;
+    for (let i = 0; i < len; i++) {
+      let s = (len-i)*10;
+      insert_row(table, i, s, s+180);
+    }
+  }
+};
