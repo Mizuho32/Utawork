@@ -34,7 +34,7 @@
             <div id="seg_wrapper" class="content_wrapper">
             <% if not is_mobile then %>
               <div class="uis">
-                <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
+                <input id="video_url" type="text" value="<%= video_id %>" placeholder="YouTube video URL"></input>
                 <button id="load_video" class="fa-brands fa-youtube" onclick="update_video(event);"></button>
                 <button id="delete_item" class="fa-solid fa-trash" onclick="delete_item_handle(event);"></button>
                 <button id="add_item"  class="fa-solid fa-plus" style="height: 100%;" onclick="add_item(event);"></button>
@@ -47,13 +47,16 @@
             </div>
           </div>
           <div class="tab_content" id="raw_times_content">
-            <div id="seg_wrapper" class="content_wrapper">
-              <textarea id="raw_times_input"></textarea>
-              <button id="raw_times_btn" onclick="load_segments(event);">Load</input>
+            <div class="content_wrapper">
+              <textarea id="raw_times_input"><%= raw_times %></textarea>
+              <button id="raw_times_btn" onclick="load_segments();">Load</input>
             </div>
           </div>
           <div class="tab_content" id="output_content">
-            <textarea></textarea>
+            <div class="content_wrapper">
+              <textarea id="tags"></textarea>
+              <button id="upload_tags" onclick="upload_tags(event);">Upload</input>
+            </div>
           </div>
         </div>
 
