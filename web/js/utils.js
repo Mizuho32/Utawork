@@ -83,6 +83,7 @@ function search(word) {
         a.removeAttribute("href");
         a.setAttribute("tabindex", "-1");
       });
+      div.querySelector("#footcnt").remove();
 
       if (is_mobile_html()) toggle_info(true);
       socket.close();
@@ -96,9 +97,12 @@ function escapeRegex(string) {
 }
 
 function extractWord(word, html) {
+  if (!word) return word;
+
   let initial = html.indexOf(word);
   let subst = html.substring(initial-50, initial-1) + html.substring(initial, initial+50);
   let nonsymbols = "[^-!$%^&*()_+|~=\`{}\\[\\]:\\\";'<>?,.\\/ ]";
+  //console.log({word, initial, subst});
 
   return subst.match(`(${nonsymbols}*${escapeRegex(word)}${nonsymbols}*)`)?.[1] || "";
 }

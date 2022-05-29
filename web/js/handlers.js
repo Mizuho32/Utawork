@@ -44,10 +44,11 @@ function extract_word(e) {
   state.is_composing = e.isComposing;
   if (!e.target.value) return;
 
-  //console.log(e.target.value);
   if (state.last_timeout !== undefined) {
     clearTimeout(state.last_timeout);
   }
+
+  //console.log(e.target.value, e.isComposing);
 
   state.last_timeout = setTimeout(()=>{
     if (!state.is_composing) { // safe to overwrite value

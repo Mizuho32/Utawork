@@ -83,6 +83,12 @@ function insert_row(table, idx, start, end) {
   let new_row = table.insertRow(-1);
   new_row.setAttribute("class", "item");
   new_row.innerHTML = segment_row(idx, start, end);
+  new_row.querySelectorAll("input.name, input.artist")
+    .forEach(inp=>inp.addEventListener('compositionend', (e) => {
+      //console.log("catch compose");
+      state.is_composing = false;
+      extract_word(e);
+    }));
   if (!is_mobile_html()) apply_tablerow_shortcuts(new_row);
   return new_row;
 }

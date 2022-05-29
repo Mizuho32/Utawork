@@ -27,11 +27,13 @@ window.onload = ()=>{
     load_segments(times);
     document.querySelector("#segments").checked = true;
   } else {
-    let table = document.querySelector("#stamps");
-    let len = 10;
-    for (let i = 0; i < len; i++) {
-      let s = (len-i)*10;
-      insert_row(table, i, s, s+180);
+    if (location.search.includes("d")) {
+      let table = document.querySelector("#stamps");
+      let len = 10;
+      for (let i = 0; i < len; i++) {
+        let s = (len-i)*10;
+        insert_row(table, i, s, s+180);
+      }
     }
   }
 };
