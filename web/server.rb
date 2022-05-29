@@ -45,13 +45,16 @@ get '/websocket' do
 
         if query.key? "search" then
           word = query["search"].to_s
-          puts "search: #{word}"
-          sleep 1
-          html = Oga.parse_html(File.read("public/test2.html").encode("UTF-16BE", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?').encode("UTF-8"))
-          main = html.xpath("//div[@id='main']").first
+          if ARGV.first&.include? "d" then
+            puts "search: #{word}"
+            #sleep 1
+            html = Oga.parse_html(File.read("public/test2.html").encode("UTF-16BE", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?').encode("UTF-8"))
+            main = html.xpath("//div[@id='main']").first
 
-          ws.send(main.to_xml)
-          #ws.send(Utils.google(word))
+            ws.send(main.to_xml)
+          else
+            ws.send(Utils.google(word))
+          end
         elsif query.key? "tags" then
           begin
             tags = JSON.parse(query["tags"])
