@@ -10,7 +10,7 @@ require_relative 'ruby/utils'
 
 Utils.init()
 
-set :public_folder, __dir__
+set :public_folder, (Pathname(__dir__) / "public")
 set :server, 'thin'
 set :sockets, []
 set :port, 8000
@@ -47,7 +47,7 @@ get '/websocket' do
           word = query["search"].to_s
           puts "search: #{word}"
           sleep 1
-          html = Oga.parse_html(File.read("test.html").encode("UTF-16BE", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?').encode("UTF-8"))
+          html = Oga.parse_html(File.read("public/test2.html").encode("UTF-16BE", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?').encode("UTF-8"))
           main = html.xpath("//div[@id='main']").first
 
           ws.send(main.to_xml)
