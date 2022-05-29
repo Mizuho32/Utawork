@@ -61,16 +61,23 @@ div#info {
   background-color: #AACCFF;
 
 }
-div#info_toggle {
-  margin-top: 8px;
-  margin-bottom: 8px;
+div.uis {
+  display: flex;
+  flex-wrap: nowrap;
+  flex-direction: row;
+  justify-content: space-evenly;
+}
+#info_toggle {
+  /*margin-top: 8px;
+  margin-bottom: 8px;*/
+  height: 3em;
 }
 div.load_video {
   display: flex;
   flex-wrap: nowrap;
   flex-direction: row;
 }
-div#search {
+#search {
   overflow: scroll;
 }
 
@@ -98,6 +105,11 @@ th {
 td {
   border: solid #000000 1px;
   background-color: #EEEEEE;
+}
+td.no > div {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 div.time {
   display: flex;
