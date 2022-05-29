@@ -79,32 +79,6 @@ function insert_row(table, idx, start, end) {
   let new_row = table.insertRow(-1);
   new_row.setAttribute("class", "item");
   new_row.innerHTML = segment_row(idx, start, end);
+  if (!is_mobile_html()) apply_tablerow_shortcuts(new_row);
   return new_row;
 }
-
-function apply_tablerow_shortcuts(row) {
-  row.addEventListener('keyup', (e) => {
-    //console.log(e.target, `Key "${e.key}" released  [event: keyup]`);
-
-    if (e.target.type != "text" && e.key == " ") { // space key and not text input
-      let st = player.getPlayerState();
-      if (st == YT.PlayerState.PLAYING) {
-        player.pauseVideo();
-      } else {
-        player.playVideo();
-      }
-    } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter -> search word
-      search(e.target.value);
-    } else if (e.keyCode == 40 || e.keyCode == 38) { // down or up
-      //                         td            tr
-      let current_row = e.target.parentElement.parentElement
-      let target_row = adjacent_row(current_row, e.keyCode - 39);
-
-      if (target_row != current_row) {
-        target_row.querySelector("td.name > input").focus();
-      }
-    }
-  });
-}
-
-

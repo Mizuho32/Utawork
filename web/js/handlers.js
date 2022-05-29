@@ -1,3 +1,44 @@
+function apply_tablerow_shortcuts(row) {
+  row.addEventListener('keydown', (e) => {
+    //console.log(e.target, `Key "${e.key}" released  [event: keyup]`);
+
+    if (e.target.type != "text" && e.key == " ") { // space key and not text input
+      let st = player.getPlayerState();
+      if (st == YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+      } else {
+        player.playVideo();
+      }
+    } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter -> search word
+      search(e.target.value);
+    } else if (e.keyCode == 40 || e.keyCode == 38 || e.keyCode == 9) { // down or up
+
+      let current_row = e.target.closest("tr");
+      let delta = e.keyCode == 40 || (e.keyCode == 9 && !e.shiftKey) ? 1 : -1;
+      let target_row = adjacent_row(current_row, delta);
+      //console.log(target_row);
+
+      if (target_row != current_row) { // there are more rows
+        if (e.target.type != "time" && e.keyCode != 9)  { // next row if not Tab key
+          target_row.querySelector("td.name input").focus();
+        }
+      } else { // no more rows
+        if (e.keyCode != 38) { // not arrow up
+          let name   = current_row.querySelector("input.name");
+          let artist = current_row.querySelector("input.artist");
+
+          if (name.value != "" && artist.value != "" && artist == document.activeElement) {
+            if (e.keyCode == 9) e.preventDefault();
+
+            let newone = insert_row(current_row.closest("tbody"), -1, 0, 0);
+            newone.querySelector("td.name input").focus();
+          }
+        }
+      } // end of no more rows
+    }
+  });
+}
+
 function touchend(e) {
   if (player) e.target.value = to_time(player.getCurrentTime());
   timechange(e, false); // no seek
