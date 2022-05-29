@@ -54,100 +54,6 @@ function to_num(time) {
 }
 
 
-// For UI
-
-function touchend(e) {
-  if (player) e.target.value = to_time(player.getCurrentTime());
-  timechange(e, false); // no seek
-}
-
-function timeinput_nonPC(time, is_start) {
-  let startend = is_start ? "start" : "end";
-  let time_input = `
-  <div class="time_input">
-    <input type="text" class="time ${startend}" value="${time}" onchange="timechange(event);" readonly="readonly" ontouchend="touchend(event);"/>
-    <div class="time_buttons">
-      <button class="fa-solid fa-minus" onclick="changetime(event, -1)"></button>
-      <button class="fa-solid fa-plus"  onclick="changetime(event, +1)"></button>
-    </div>
-  </div>
-`;
-  if (is_start) {
-    return `
-    ${time_input}
-    <button class="fa-solid fa-backward-step" ontouchend="seek_to(event);"></button>`;
-  } else {
-    return `
-    <button class="fa-solid fa-forward-step"  ontouchend="seek_to(event);"></button>
-    ${time_input}
-    `;
-  }
-}
-
-function gen_timeinput(value, is_start=true) {
-  if (detectMobile()) {
-    return timeinput_nonPC(value, is_start);
-  } else {
-    let startend = is_start ? "start" : "end";
-    return `<input type="time" class="time ${startend}" value="${value}" onchange="timechange(event);" />`;
-  }
-}
-
-function insert_row(table, idx, start, end) {
-  if (idx < 0) idx = table.rows.length;
-
-  let new_row = table.insertRow(-1);
-  new_row.setAttribute("class", "item");
-  new_row.innerHTML = segment_row(idx, start, end);
-  return new_row;
-}
-
-function segment_row(idx, start, end) {
-  if (is_mobile_html()) {
-    return `
-<td class="no">
-  <div>
-  <label style="text-align: center;" >${idx}</label>
-  <input type="checkbox"></input>
-  <i class="fa-solid fa-trash" style="text-align: center;" ></i>
-  </div>
-</td>
-<td class="item">
-<table>
-  <tr>
-    <td><label class="start">Start time</label></td>
-    <td><label class="ldngth">Length</label></td>
-    <td><label class="end">End time</label></td>
-  </tr>
-  <tr>
-    <td><div class="time start">${ gen_timeinput(to_time(start)) }</div></td>
-    <td><div class="length">${to_time(end-start, 2)}</div></td>
-    <td><div class="time end">${   gen_timeinput(to_time(end), false) }</div></td>
-  </tr>
-</table>
-  <div class="name">
-    <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
-    <input type="text" class="name" onfocus="on_songname_focus(event);" placeholder="Song name"></input>
-  </div>
-  <div class="artist"><input type="text" class="artist" placeholder="Artist"></input></div>
-</td>`;
-  } else {
-    return `
-<td class="no">${idx}</td>
-<td class="time start">${ gen_timeinput(to_time(start)) }</td>
-<td class="time end">${   gen_timeinput(to_time(end), false) }</td>
-<td class="length">${to_time(end-start, 2)}</td>
-<td class="name">
-  <button class="fa-solid fa-magnifying-glass" onclick="search_button(event)"></button>
-  <input type="text" class="name" onfocus="on_songname_focus(event);"></input>
-</td>
-<td class="artist"><input type="text" class="artist"></input></td>`;
-  }
-}
-
-
-
-
 function load_segments() {
   let table = document.querySelector("#stamps");
   for (;table.rows[0];)
@@ -167,69 +73,6 @@ function load_segments() {
     });
 }
 
-
-// time utils
-function timechange(e, seek=true) {
-  // e.target == input
-  let item = e.target.closest(".item");
-
-  let length = item.querySelector(".length");
-  let times = Array.from(item.querySelectorAll("input.time"))
-    .map(time_input=>to_num(time_input.value))
-    .sort((l,r)=>l-r).reverse();
-
-  //console.log(times);
-  //console.log(times.map(x=>to_time(x)));
-
-  length.innerText = to_time(times[0]-times[1], 2);
-
-  if (player && seek) player.seekTo(to_num(e.target.value), true);
-}
-
-function changetime(e, delta) {
-  let cntner = e.target.closest(".time");
-  let input = cntner.querySelector("input");
-  input.value = to_time(to_num(input.value)+delta);
-  timechange({target: input});
-}
-
-function seek_to(e) {
-  let sec = to_num(e.target.closest(".time").querySelector("input.time").value);
-  //console.log("seek_to", {sec});
-  if (player) {
-    player.seekTo(sec);
-    player.playVideo();
-  }
-}
-
-
-
-var focused;
-function on_songname_focus(e) {
-  if (e.target != focused) {
-    let tr = e.target.closest(".item");
-    let raw_time = tr.querySelector("input.time.start").value;
-    let time = to_num(raw_time);
-    focused = e.target;
-
-    console.log(`Start ${raw_time}`);
-    if (player !== undefined) {
-      player.playVideo();
-      player.seekTo(time, true);
-    }
-  }
-}
-
-function update_video(e) {
-  let id = url2id(e.target.parentElement.querySelector("input").value);
-  console.log(id);
-
-  if (player === undefined) {
-    player = load_video(id);
-  } else {
-    player.loadVideoById(id);
-  }
-}
 
 function adjacent_row(row, delta) {
   let idx = row.rowIndex + delta -1; // 1 origin?
@@ -260,61 +103,6 @@ function search(word) {
     };
 
   }
-}
-
-function search_button(e) {
-  search(e.target.parentElement.querySelector("input").value);
-}
-
-
-
-function apply_tablerow_shortcuts(row) {
-  row.addEventListener('keyup', (e) => {
-    //console.log(e.target, `Key "${e.key}" released  [event: keyup]`);
-
-    if (e.target.type != "text" && e.key == " ") { // space key and not text input
-      let st = player.getPlayerState();
-      if (st == YT.PlayerState.PLAYING) {
-        player.pauseVideo();
-      } else {
-        player.playVideo();
-      }
-    } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter -> search word
-      search(e.target.value);
-    } else if (e.keyCode == 40 || e.keyCode == 38) { // down or up
-      //                         td            tr
-      let current_row = e.target.parentElement.parentElement
-      let target_row = adjacent_row(current_row, e.keyCode - 39);
-
-      if (target_row != current_row) {
-        target_row.querySelector("td.name > input").focus();
-      }
-    }
-  });
-}
-
-function show_output(e) {
-  let table = document.querySelector("#stamps");
-  let text = Array.from(table.rows)
-    .map(row => {
-      let name = row.querySelector("input.name").value;
-      let artist = row.querySelector("input.artist").value;
-
-      if (!name && !artist) { return ""; }
-
-      let times = Array.from(row.querySelectorAll("input.time"))
-        .map(time_input=>to_num(time_input.value))
-        .sort((l,r)=>l-r)
-        .map(n=>to_time(n))
-        .join(" - ");
-
-      return `${times} ${name} / ${artist}`;
-    })
-    .filter(row=>row)
-    .join("\n");
-
-  document.querySelector("#output_content > textarea").textContent = text;
-  console.log(text);
 }
 
 
@@ -353,19 +141,6 @@ function is_mobile_html() {
 }
 
 
-// For info pane toggle
-function info_toggle(e) {
-  if (!moving) {
-    let i = e.currentTarget.querySelector("i")
-    let to_expand = i.getAttribute("class").match(/up/i);
-    let info = e.target.closest("#info");
-
-    toggle_info(to_expand, info, i);
-  } else {
-    moving = false;
-  }
-}
-
 function toggle_info(open, info, i) {
   if (!info) info = document.querySelector("#info");
   if (!i) i = info.querySelector("i");
@@ -383,23 +158,6 @@ function toggle_info(open, info, i) {
   }, 150);
 }
 
-let moving = false;
-function info_move(e) {
-  moving = true;
-}
-
-function add_item(e) {
-  let table = document.querySelector("#stamps");
-  let newone = insert_row(table, -1, 0, 0);
-  let y = newone.getBoundingClientRect().bottom;
-  table.closest("#segments_content").scrollBy(0, y);
-}
-
-function delete_item_handle(e) {
-  if (confirm("選択した項目を削除します")) {
-    delete_item(e);
-  }
-}
 
 function delete_item(e) {
     let table = document.querySelector("#stamps");
@@ -407,4 +165,19 @@ function delete_item(e) {
       if (row.querySelector("input[type='checkbox']").checked)
         row.remove();
     }
+
+    sort_item();
+}
+
+function sort_item() {
+  let table = document.querySelector("#stamps");
+  let slctr = "input.time.start";
+
+  Array.from(table.rows)
+    .sort((l,r) => to_num(l.querySelector(slctr).value) - to_num(r.querySelector(slctr).value))
+    .map((row,i)=>{
+      row.querySelector("td.no  label").innerHTML = String(i);
+      return row;
+    })
+    .forEach(tr=>table.appendChild(tr));
 }
