@@ -54,26 +54,6 @@ function to_num(time) {
 }
 
 
-function load_segments() {
-  let table = document.querySelector("#stamps");
-  for (;table.rows[0];)
-    table.deleteRow(0);
-
-  let area = document.querySelector("#raw_times_input");
-  area.value
-    .split("\n")
-    .forEach((row,i)=>{
-
-      let times = row.split(/\s+/).map(n=>parseInt(n));
-      if (times.length == 2) {
-        let new_row = insert_row(table, i, ...times);
-        apply_tablerow_shortcuts(new_row);
-      }
-
-    });
-}
-
-
 function adjacent_row(row, delta) {
   let idx = row.rowIndex + delta -1; // 1 origin?
 
