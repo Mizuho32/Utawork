@@ -78,7 +78,7 @@ div.time {
 }
 
 input.time {
-  width: 4em;
+  width: fit-content;
   font-size: medium;
 }
 div.time_buttons {
