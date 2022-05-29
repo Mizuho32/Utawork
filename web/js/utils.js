@@ -83,7 +83,7 @@ function search(word) {
         a.removeAttribute("href");
         a.setAttribute("tabindex", "-1");
       });
-      div.querySelector("#footcnt").remove();
+      div.querySelector("#footcnt")?.remove();
 
       if (is_mobile_html()) toggle_info(true);
       socket.close();
