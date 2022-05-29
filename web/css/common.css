@@ -1,4 +1,4 @@
-#raw_times_input {
+#raw_times_input, #tags {
   flex-grow : 1;
 }
 
@@ -73,7 +73,7 @@ div.uis {
   height:90%;
   width: 100%;
 }
-#raw_times_btn {
+#raw_times_btn, #upload_tags {
   width: 100%;
-  height: 8%;
+  height: 10%;
 }
