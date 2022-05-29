@@ -5,6 +5,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 
+      <link href="css/common.css" type="text/css" rel="stylesheet" />
       <link href="css/<%= css %>" type="text/css" rel="stylesheet" />
 
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -27,20 +28,20 @@
             <label class="tab_item" for="output">Output</label>
 
           <div class="tab_content" id="segments_content">
-            <!--<table class="tablecss">
-              <thead>
-                <tr>
-                <th class="no">No.</th>
-                <th class="start">Start</th>
-                <th class="end">End</th>
-                <th class="length">Length</th>
-                <th class="name">Song name</th>
-                <th class="artist">Artist</th>
-                </tr>
-              </thead>
-              <tbody id="stamps"></tbody>
-            </table>-->
-            <%= table %>
+            <div id="seg_wrapper">
+            <% if not is_mobile then %>
+              <div class="uis">
+                <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
+                <button id="load_video" class="fa-brands fa-youtube" onclick="update_video(event);"></button>
+                <button id="delete_item" class="fa-solid fa-trash" onclick="delete_item_handle(event);"></button>
+                <button id="add_item"  class="fa-solid fa-plus" style="height: 100%;" onclick="add_item(event);"></button>
+                <button id="sort_item" class="fa-solid fa-sort" style="height: 100%;" onclick="sort_item();"></button>
+              </div>
+            <% end %>
+            <div id="table_wrapper">
+              <%= table %>
+            </div>
+            </div>
           </div>
           <div class="tab_content" id="raw_times_content">
             <textarea id="raw_times_input"></textarea>

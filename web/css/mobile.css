@@ -61,12 +61,6 @@ div#info {
   background-color: #AACCFF;
 
 }
-div.uis {
-  display: flex;
-  flex-wrap: nowrap;
-  flex-direction: row;
-  justify-content: space-evenly;
-}
 #info_toggle {
   /*margin-top: 8px;
   margin-bottom: 8px;*/

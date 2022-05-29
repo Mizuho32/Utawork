@@ -31,15 +31,18 @@ function gen_timeinput(value, is_start=true) {
 }
 
 function segment_row(idx, start, end) {
-  if (is_mobile_html()) {
-    return `
+  let no_col = `
 <td class="no">
   <div>
   <label style="text-align: center;" >${idx}</label>
   <input type="checkbox"></input>
   <i class="fa-solid fa-trash" style="text-align: center;" ></i>
   </div>
-</td>
+</td>`;
+
+  if (is_mobile_html()) {
+    return `
+${no_col}
 <td class="item">
 <table>
   <tr>
@@ -61,7 +64,7 @@ function segment_row(idx, start, end) {
 </td>`;
   } else {
     return `
-<td class="no">${idx}</td>
+${no_col}
 <td class="time start">${ gen_timeinput(to_time(start)) }</td>
 <td class="time end">${   gen_timeinput(to_time(end), false) }</td>
 <td class="length">${to_time(end-start, 2)}</td>

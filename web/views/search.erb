@@ -1,4 +1,5 @@
 <% if is_mobile then %>
+
 <div id="info">
   <div class="uis">
     <button id="delete_item" class="fa-solid fa-trash" onclick="delete_item_handle(event);"></button>
@@ -28,12 +29,10 @@
     </div>
   </div>
 </div>
+
 <% else %>
+
 <div id="info">
-  <div class="load_video">
-    <input id="video_url" type="text" value="M7lc1UVf-VE" placeholder="YouTube video URL"></input>
-    <button id="load_video" class="fa-brands fa-youtube" onclick="update_video(event);"></button>
-  </div>
   <div id="search">
       <div>
         <li>1. "YouTube video URL"対象YouTubeビデオのURL貼り付けて、ロード</li>
@@ -44,4 +43,5 @@
     </div>
   </div>
 </div>
+
 <% end %>
