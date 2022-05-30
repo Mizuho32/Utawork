@@ -182,8 +182,8 @@ function upload_tags(e) {
         .map(n=>to_time(n))
 
       return [...times, name||"", artist||""]
-    })
-    .filter(row=>row[2] || row[3]);
+    }); // should save raw data?
+    //.filter(row=>row[2] || row[3]);
 
 
   // send
