@@ -27,7 +27,7 @@ window.onload = ()=>{
     load_segments(times);
     document.querySelector("#segments").checked = true;
   } else {
-    if (location.search.includes("d")) {
+    if (location.search.match(/(?:\?|&)d=/)) {
       let table = document.querySelector("#stamps");
       let len = 10;
       for (let i = 0; i < len; i++) {
