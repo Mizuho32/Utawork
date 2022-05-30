@@ -3,5 +3,14 @@
 Detect music sections from audio files (realtime detecting is a future work) by using audio classification model.
 This is WIP.
 
+== Prerequisites
+
+[source, bash]
+----
+$ pip install -r ast/requirements.txt
+$ pip install -r requirements.txt
+$ wget "https://www.dropbox.com/s/ca0b1v2nlxzyeb4/audioset_10_10_0.4593.pth?dl=1" -O ast/pretrained_models/audioset_10_10_0.4593.pth
+----
+
 == Usage
 See `notebooks/Recog.ipynb`.
