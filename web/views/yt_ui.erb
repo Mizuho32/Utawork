@@ -1,7 +1,17 @@
 <div class="yt_ui_container">
-  <button id="yt_backward_fast" class="yt_ui fa-solid fa-backward-fast" onclick=";"></button>
-  <button id="yt_backward"      class="yt_ui fa-solid fa-backward-fast" onclick=";"></button>
-  <button id="yt_playpause"     class="yt_ui fa-solid fa-play"          onclick=";"></button>
-  <button id="yt_forward_fast"  class="yt_ui fa-solid fa-forward-fast"  onclick=";"></button>
-  <button id="yt_forward"       class="yt_ui fa-solid fa-forward-fast"  onclick=";"></button>
+  <button id="yt_backward_fast" onclick="delta_seek(-10);" class="yt_ui">
+    <i class="fa-solid fa-backward-fast"></i>10
+  </button>
+  <button id="yt_backward_fast" onclick="delta_seek(-5);" class="yt_ui">
+    <i class="fa-solid fa-backward"></i>5
+  </button>
+
+  <button id="yt_playpause" class="yt_ui fa-solid fa-play" onclick="yt_toggle(event);"></button>
+
+  <button id="yt_forward_fast" onclick="delta_seek(5);" class="yt_ui">
+    5<i class="fa-solid fa-forward-fast"></i>
+  </button>
+  <button id="yt_forward_fast" onclick="delta_seek(10);" class="yt_ui">
+    10<i class="fa-solid fa-forward"></i>
+  </button>
 </div>

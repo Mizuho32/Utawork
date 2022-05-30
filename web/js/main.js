@@ -12,12 +12,21 @@ function onYouTubeIframeAPIReady() {
   //player = load_video('M7lc1UVf-VE');
 }
 
+function onPlayerStateChange(e) {
+  let btn = document.querySelector("#yt_playpause");
+  if (e.data == YT.PlayerState.PLAYING || e.data == YT.PlayerState.BUFFERING) { // start
+    btn.setAttribute("class", btn.getAttribute("class").replace("play", "pause"));
+  } else { // pause
+    btn.setAttribute("class", btn.getAttribute("class").replace("pause", "play"));
+  }
+}
+
 function stopVideo() {
-  player.stopVideo();
+  if (player) player.stopVideo();
 }
 
 function playVideo() {
-  player.playVideo();
+  if (player) player.playVideo();
 }
 
 

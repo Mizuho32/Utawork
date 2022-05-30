@@ -99,12 +99,34 @@ function changetime(e, delta) {
   timechange({target: input});
 }
 
+
+
+// youtube
+
 function seek_to(e) {
   let sec = to_num(e.target.closest(".time").querySelector("input.time").value);
   //console.log("seek_to", {sec});
   if (player) {
     player.seekTo(sec);
     player.playVideo();
+  }
+}
+
+function delta_seek(delta) {
+  if (player) {
+    let cur = player.getCurrentTime();
+    player.seekTo(cur+delta);
+  }
+}
+
+function yt_toggle(e) {
+  if (player) {
+    let st = player.getPlayerState();
+    if (st == YT.PlayerState.PLAYING || st == YT.PlayerState.BUFFERING) {
+      player.pauseVideo();
+    } else {
+      player.playVideo();
+    }
   }
 }
 
