@@ -22,6 +22,10 @@ function playVideo() {
 
 
 window.onload = ()=>{
+  if (location.search.match(/(?:\?|&)nonPC=/)) {
+    mobile = true;
+  }
+
   let times = document.querySelector("#raw_times_input").textContent;
   if (times) {
     load_segments(times);
