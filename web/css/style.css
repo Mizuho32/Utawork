@@ -77,10 +77,15 @@ div.time {
   flex-wrap: nowrap;
 }
 
-input.time {
+input.time[type="time"] {
   width: fit-content;
   font-size: medium;
 }
+input.time[type="text"] {
+  width: 7ch; /* time is 8digit fixed */
+  font-size: medium;
+}
+
 div.time_buttons {
   display: flex;
   flex-direction: row;
