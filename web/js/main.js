@@ -26,6 +26,10 @@ window.onload = ()=>{
     mobile = true;
   }
 
+  if (!location.search.match(/(?:\?|&)notgl=/) && is_mobile_html()) {
+    toggle_info(true); // open
+  }
+
   let times = document.querySelector("#raw_times_input").textContent;
   if (times) {
     load_segments(times);

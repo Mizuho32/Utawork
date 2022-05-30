@@ -160,6 +160,9 @@ function update_video(e) {
   } else {
     player.loadVideoById(id);
   }
+
+  if (is_mobile_html())
+    toggle_info(false); // close info pane
 }
 
 function search_button(e) {
