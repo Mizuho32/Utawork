@@ -40,6 +40,7 @@
                 <button id="add_item"  class="fa-solid fa-plus" style="height: 100%;" onclick="add_item(event);"></button>
                 <button id="sort_item" class="fa-solid fa-sort" style="height: 100%;" onclick="sort_item();"></button>
               </div>
+              <%= erb(:yt_ui) %>
             <% end %>
               <div id="table_wrapper">
                 <%= table %>
@@ -59,6 +60,10 @@
             </div>
           </div>
         </div>
+
+        <% if is_mobile then %>
+          <%= erb(:yt_ui) %>
+        <% end %>
 
       </div>
 

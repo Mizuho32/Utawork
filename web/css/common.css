@@ -81,3 +81,12 @@ div.uis {
 table.tablecss {
   min-width: 100%;
 }
+
+div.yt_ui_container {
+  display: flex;
+  justify-content: space-evenly;
+  padding-top: 10px;
+}
+button.yt_ui {
+  flex: 1;
+}
