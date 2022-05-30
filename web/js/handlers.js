@@ -23,7 +23,7 @@ function apply_tablerow_shortcuts(row) {
           target_row.querySelector("td.name input").focus();
         }
       } else { // no more rows
-        if (e.keyCode != 38) { // not arrow up
+        if (e.keyCode != 38 && !(e.keyCode == 9 && e.shiftKey) ) { // not arrow up and not shift+Tab
           let name   = current_row.querySelector("input.name");
           let artist = current_row.querySelector("input.artist");
 
