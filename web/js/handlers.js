@@ -39,7 +39,7 @@ function apply_tablerow_shortcuts(row) {
   });
 }
 
-let state = {last_timeout: undefined, is_composing: undefined, last_ext: ""};
+let state = {last_timeout: undefined, is_composing: undefined, last_value: ""};
 function extract_word(e) {
   state.is_composing = e.isComposing;
   if (!e.target.value) return;
@@ -55,14 +55,14 @@ function extract_word(e) {
       let ext = extractWord(e.target.value, document.querySelector('#search > div').innerHTML);
 
       // For the case ext is too long (e.g. "坂本真綾の曲")
-      if (ext == state.last_ext && ext.includes(e.target.value) && ext != e.target.value) {
-        state.last_ext = "";
+      if (state.last_value.includes(e.target.value) && e.target.value.length < state.last_value.length) {
+        state.last_value = e.target.value;
         return;
       }
 
       if (ext.includes(e.target.value)) {
         e.target.value = ext;
-        state.last_ext = ext;
+        state.last_value = ext;
       }
     }
     state.last_timeout = undefined;
