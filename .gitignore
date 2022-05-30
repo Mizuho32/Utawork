@@ -8,6 +8,7 @@
 *.txt
 *.pickle
 *.wav
+tags
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/ruby,jupyternotebooks,python
