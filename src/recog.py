@@ -194,7 +194,10 @@ class Recog:
     @classmethod
     def fbank(cls, y, sr, target_length, mel_bins=128, frame_shift=10, repeat=False):
         if type(y) == np.ndarray:
-            waveform = torch.from_numpy(y.astype(np.float32)).clone().cpu()
+            if torch.cuda.is_available():
+                waveform = torch.from_numpy(y.astype(np.float32)).clone().cuda()
+            else:
+                waveform = torch.from_numpy(y.astype(np.float32)).clone().cpu()
         else:
             waveform = y
 
