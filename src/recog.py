@@ -778,10 +778,17 @@ class Recog:
             i = 0
 
 
-        while start+clip_len <= stop_time:
+        total_durat = librosa.get_duration(filename=filename)
+        total_count_upper = int(np.ceil(total_durat/clip_len))
+
+        for i in range(total_count_upper+1):
+            if not start+clip_len <= stop_time:
+                break
 
             print(f"{i} Start:{start}, offset:{wav_offset}, len:{clip_len}")
             wav, sr = librosa.load(filename, sr=sr, mono=is_mono, offset=wav_offset, duration=clip_len)
+
+            #print(f"{sr*(start-wav_offset)} < {wav.shape[-1]}")
             if not sr*(start-wav_offset) < wav.shape[-1]: # empty
                 break
 
