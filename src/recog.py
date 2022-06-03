@@ -894,12 +894,36 @@ class Recog:
         cur_itv = None
 
         # raw detect series to (start,end) segments
-        for cache in metadata["cache_list"]:
+        non_empty_cache_list = list(filter(lambda cache: cache["data"]["detect_series_denoised"].keys(),
+                metadata["cache_list"]))
+
+        for i, cache in enumerate(non_empty_cache_list):
             d_series = cache["data"]["detect_series_denoised"]
-            for prev_time, cur_time in utils.each_cons(sorted(d_series.keys()), 2):
-                prev_label = d_series[prev_time]
-                cur_label  = d_series[cur_time]
-                # print(prev_time, prev_label, State.Music in prev_label)
+            sorted_times = sorted(d_series.keys())
+
+            if not sorted_times:
+                continue
+
+            # for terminal caches, Start and End label
+            if i==0: #first
+                sorted_times.insert(0, sorted_times[0]-1)
+
+            if i == len(non_empty_cache_list)-1 : # last
+                sorted_times.append(sorted_times[-1]+1)
+
+            for prev_time, cur_time in utils.each_cons(sorted_times, 2):
+                try:
+                    prev_label = d_series[prev_time]
+                except KeyError:
+                    prev_time = sorted_times[1] # original time 0
+                    prev_label = State.Start
+
+                try:
+                    cur_label  = d_series[cur_time]
+                except KeyError:
+                    cur_label  = State.End
+
+                #print(prev_time, prev_label, State.Music in prev_label)
 
                 if State.InProgress in prev_label and State.InProgress in cur_label:
                     continue
