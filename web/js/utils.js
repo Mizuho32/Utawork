@@ -1,6 +1,6 @@
 function url2id(url) {
 
-  if (url.includes("youtube")) {
+  if (url.includes("youtu")) {
     return url.match(/(?:v=|\.be\/)([^=&\/]+)/i)[1]
   }
 
