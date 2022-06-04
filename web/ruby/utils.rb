@@ -54,16 +54,33 @@ module Utils
     return id, text
   end
 
-  def save_tags(vid, tags)
+  def ensure_dir(vid)
     id = video_id(vid)
     dir = DATA_DIR / id
 
     dir.mkdir if not dir.exist?
+    dir
+  end
+
+  def save_tags(vid, tags)
+    dir = ensure_dir(vid)
 
     csv = tags.map(&:to_csv).join
     ext = TAGS_FILE.extname
     File.write(dir/TAGS_FILE, csv)
     File.write(dir/"#{TAGS_FILE.basename(ext)}_#{DateTime.now.iso8601}#{ext}", csv)
+  end
+
+  def save_segments(vid, tsv)
+    dir = ensure_dir(vid)
+
+    ext = SEGMENTS_FILE.extname
+    File.write(dir/SEGMENTS_FILE, tsv)
+    File.write(dir/"#{SEGMENTS_FILE.basename(ext)}_#{DateTime.now.iso8601}#{ext}", tsv)
+  end
+
+  def remove_bundler(ex)
+    ex.backtrace.select{|line| not line.include?("bundle")}
   end
 
 end
