@@ -32,6 +32,24 @@ get '/' do
   }
 end
 
+post "/segments" do
+ request.body.rewind  # 既に読まれているときのため
+ data = JSON.parse request.body.read
+ puts data
+
+ if data["segments"].empty? then
+   status 501
+   "Empty timestamp"
+ else
+   Utils.save_segments(data["video_id"], data["segments"])
+   status 201
+   "OK"
+ end
+rescue StandardError => ex
+  status 500
+  "#{ex.message}\n#{Utils.remove_bundler(ex).join("\n")}"
+end
+
 get '/websocket' do
   if request.websocket?
     request.websocket do |ws|
@@ -64,12 +82,12 @@ get '/websocket' do
 
             ws.send(tags.size.to_s);
           rescue StandardError => ex
-            puts ex.message, ex.backtrace.select{|line| not line.include?("bundle")}.join("\n")
+            puts ex.message, Utils.remove_bundler(ex).join("\n")
             ws.send(ex.message);
           end
         end
       rescue StandardError => ex
-        puts ex.message, ex.backtrace.select{|line| not line.include?("bundle")}.join("\n")
+        puts ex.message, Utils.remove_bundler(ex).join("\n")
         #settings.sockets.each do |s|
         #  s.send(msg)
         #end
