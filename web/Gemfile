@@ -10,4 +10,5 @@ gem 'oga'
 group :develop do
   gem 'irb'
   gem 'rdoc'
+  gem "google-apis-youtube_v3"
 end
