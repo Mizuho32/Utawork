@@ -1,102 +1,38 @@
-require 'open-uri'
-require 'json'
+require 'optparse'
 
-#require 'sinatra/reloader' if development?
-require 'oga'
-require 'sinatra'
-require 'sinatra-websocket'
+
+option = {}
+
+parser = OptionParser.new
+parser.on('-l list.yaml', "--list", "List of youtube videos") {|v| option[:list] = v }
+parser.on('-d', "--debug", "Debug mode") { option[:debug] = true }
+
+# For sinatra help
+if not ARGV.map{|el| el =~ /h(elp)?/}.any? then
+  begin
+    parser.parse!(ARGV)
+  rescue StandardError
+    STDERR.puts parser
+    exit 1
+  end
+else
+  puts parser.help
+end
 
 require_relative 'ruby/utils'
+require_relative 'ruby/main'
 
 Utils.init()
 
-set :public_folder, (Pathname(__dir__) / "public")
-set :server, 'thin'
-set :sockets, []
-set :port, 8000
-set :bind, "0.0.0.0"
 
-get '/' do
-  is_mobile = params.key?("mobile")
-  video_id, segments = Utils.load_segments(params["video_id"].to_s)
+App.run!(
+  option,
+  public_folder: (Pathname(__dir__) / "public"),
+  views:         (Pathname(__dir__) / "views"),
+  server: 'thin',
+  sockets: [],
+  port: 8000,
+  bind: "0.0.0.0",
+)
 
-  locals = {
-    :css =>  is_mobile ? "mobile.css" : "style.css",
-    is_mobile: is_mobile, raw_times: segments, video_id: video_id
-  }
-
-  erb :index, locals: {
-    **locals,
-    search: erb(:search, locals: locals),
-    table: erb(:table, locals: locals)
-  }
-end
-
-post "/segments" do
- request.body.rewind  # 既に読まれているときのため
- data = JSON.parse request.body.read
- puts data
-
- if data["segments"].empty? then
-   status 501
-   "Empty timestamp"
- else
-   Utils.save_segments(data["video_id"], data["segments"])
-   status 201
-   "OK"
- end
-rescue StandardError => ex
-  status 500
-  "#{ex.message}\n#{Utils.remove_bundler(ex).join("\n")}"
-end
-
-get '/websocket' do
-  if request.websocket?
-    request.websocket do |ws|
-
-      ws.onopen do
-        #settings.sockets << ws
-      end
-
-      ws.onmessage do |msg|
-        query = JSON.parse(msg)
-
-        if query.key? "search" then
-          word = query["search"].to_s
-          if ARGV.first&.include? "d" then
-            puts "search: #{word}"
-            #sleep 1
-            html = Oga.parse_html(File.read("public/test2.html").encode("UTF-16BE", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?').encode("UTF-8"))
-            main = html.xpath("//div[@id='main']").first
-
-            ws.send(main.to_xml)
-          else
-            ws.send(Utils.google(word))
-          end
-        elsif query.key? "tags" then
-          begin
-            tags = JSON.parse(query["tags"])
-            vid = query["video_id"]
-            puts("tags: #{tags}, id:#{vid}")
-            Utils.save_tags(vid, tags)
-
-            ws.send(tags.size.to_s);
-          rescue StandardError => ex
-            puts ex.message, Utils.remove_bundler(ex).join("\n")
-            ws.send(ex.message);
-          end
-        end
-      rescue StandardError => ex
-        puts ex.message, Utils.remove_bundler(ex).join("\n")
-        #settings.sockets.each do |s|
-        #  s.send(msg)
-        #end
-      end
-
-      ws.onclose do
-        #settings.sockets.delete(ws)
-      end
-
-    end
-  end
-end
+puts "End"
