@@ -1,6 +1,8 @@
 require 'pathname'
 require 'csv'
 require 'date'
+require 'yaml'
+require 'date'
 
 module Utils
   extend self
@@ -83,4 +85,38 @@ module Utils
     ex.backtrace.select{|line| not line.include?("bundle")}
   end
 
+  def load_list(path)
+    list = YAML.unsafe_load_file(path).inject({}){|hash, el|
+      hash[el[:video_id].to_sym] = el
+      hash
+    }
+
+    Pathname(DATA_DIR).glob("*/").each{|dir|
+      id = dir.basename.to_s.to_sym
+      list[id][:has_segments] = true if list.has_key? id and (dir / SEGMENTS_FILE).exist?
+    }
+
+    return list
+  end
+
+  def save_list(path, list)
+    File.write(path, list.values.to_yaml)
+  end
+
+  def decode_videoinfo(item)
+    item2 = {**item}
+    item2[:duration]     = in_seconds(item2[:duration])
+    item2[:published_at] = item2[:published_at].iso8601
+    return item2
+  end
+
+  # https://gist.github.com/natritmeyer/b04e219f63644948d9be
+  def in_seconds(raw_duration)
+    match = raw_duration.match(/PT(?:([0-9]*)H)*(?:([0-9]*)M)*(?:([0-9.]*)S)*/)
+    hours   = match[1].to_i
+    minutes = match[2].to_i
+    seconds = match[3].to_f
+    seconds + (60 * minutes) + (60 * 60 * hours)
+  end
 end
+
