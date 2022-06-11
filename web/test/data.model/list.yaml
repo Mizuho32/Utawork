@@ -1,0 +1,13 @@
+---
+- :title: test1
+  :video_id: test1id
+  :published_at: !ruby/object:DateTime 2022-06-02 00:02:21.000000000 +09:00
+  :duration: PT1H16M18S
+- :title: test2
+  :video_id: test2id
+  :published_at: !ruby/object:DateTime 2022-06-01 23:13:38.000000000 +09:00
+  :duration: PT1H21M42S
+- :title: test3
+  :video_id: test3id
+  :published_at: !ruby/object:DateTime 2022-05-18 20:55:06.000000000 +09:00
+  :duration: PT1H28M41S
