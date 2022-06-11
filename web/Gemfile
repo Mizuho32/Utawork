@@ -11,4 +11,5 @@ group :develop do
   gem 'irb'
   gem 'rdoc'
   gem "google-apis-youtube_v3"
+  gem 'test-unit'
 end
