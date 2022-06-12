@@ -8,6 +8,11 @@ https://redmine.lighttpd.net/boards/2/topics/9812
 > unless request['connection'] && request['connection'] =~ /Upgrade/i 
 ```
 
+## Production
+```bash
+APP_ENV=production bundle exec ruby server.rb -l data/list.yaml
+
+```
 ## Develop
 ```bash
 APP_ENV=development bundle exec ruby test/server.rb
