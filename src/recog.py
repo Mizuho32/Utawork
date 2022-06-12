@@ -766,7 +766,11 @@ class Recog:
             with open(save_dir / metadata["cache_list"][i]["data"], 'rb') as file:
                 states = pickle.load(file)["states"]
 
-            wav_offset = Recog.last_cur_time(states["prev_c_results"])
+            if i > 0:
+                wav_offset = Recog.last_cur_time(states["prev_c_results"])
+            else:
+                wav_offset = start
+
             start = states["cur_time"]
             i += 1
 
