@@ -15,7 +15,10 @@ import pickle
 
 from . import utils
 
+
 class Recog:
+    logger = None
+
 
     def __init__(self, ASTModel, input_tdim, label_path, pth_name="audioset_10_10_0.4593.pth", model_sr=16000):
         self.labels, self.ids = self.load_label(label_path)
@@ -493,7 +496,7 @@ class Recog:
 
             cur_abs_mean = np.abs(Recog.slice_wav(self, wav, sr, cur_time, cur_time+duration)).mean()
 
-            utils.print_judges(judges)
+            Recog.logger.debug(utils.judges2str(judges))
 
             # denoise inference
             judges_d = Recog.judges_denoised(judges, c_result, thres)
@@ -542,7 +545,7 @@ class Recog:
 
 
                 if detect_back_target != None:
-                    print(f"detect_back {detect_back_target}")
+                    Recog.logger.debug(f"detect_back {detect_back_target}")
                     trial = 1
                     back_start = cur_time
                     back_prev_js_d = prev_judges_d
@@ -554,7 +557,7 @@ class Recog:
                         #back_end = Recog.last_cur_time(prev_c_results, nth_latest=trial)
                         back_end = max(back_prev_js_d.keys())
                         back_prev_judge = back_prev_js_d[back_end]
-                        print(f" {trial}th trial {utils.sec2time(back_start)} {cur_judge}->{utils.sec2time(back_end)} {back_prev_js_d}")
+                        Recog.logger.debug(f" {trial}th trial {utils.sec2time(back_start)} {cur_judge}->{utils.sec2time(back_end)} {back_prev_js_d}")
 
                         detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, back_prev_js_d, detect_back_target, series, back_start, delta, duration, back_end, wav, sr, ontology, interests, thres = thres)
 
@@ -585,7 +588,7 @@ class Recog:
                     #    print(utils.js2s(tmp, "->", split=", "))
 
                     if detected_judge == None:
-                        print(f"Failed to find {detect_back_target} (at {cur_time})")
+                        Recog.logger.debug(f"Failed to find {detect_back_target} (at {cur_time})")
 
                     # FIXME? only for Music END
                     if detect_back_target == State.Music|State.End and detected_judge != None:
@@ -740,12 +743,15 @@ class Recog:
         return [*[min_interval]*min_count, *[big_interval]*big_count]
 
 
-    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[], cache_overwrite=False):
+    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[], cache_overwrite=False, console_print=True):
 
         save_dir = pathlib.Path(save_dir)
         if not save_dir.exists():
             raise FileNotFoundError(f"No such a directory {save_dir}")
 
+        utils.killLogger(Recog.logger)
+        Recog.logger  = utils.get_module_logger("detect", save_dir, console_print=console_print)
+        Recog.logger.info(f"\n  Start {datetime.datetime.now()}")
 
         # Load cache
         metad_exist = (save_dir / "metadata.yaml").exists()
@@ -785,7 +791,7 @@ class Recog:
             if not start+clip_len <= stop_time:
                 break
 
-            print(f"{i} Start:{start}, offset:{wav_offset}, len:{clip_len}")
+            Recog.logger.debug(f"{i} Start:{start}, offset:{wav_offset}, len:{clip_len}")
             wav, sr = librosa.load(filename, sr=sr, mono=is_mono, offset=wav_offset, duration=clip_len)
 
             #print(f"{sr*(start-wav_offset)} < {wav.shape[-1]}")
