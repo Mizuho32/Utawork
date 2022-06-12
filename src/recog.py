@@ -791,6 +791,8 @@ class Recog:
         total_durat = librosa.get_duration(filename=filename)
         total_count_upper = int(np.ceil(total_durat/clip_len))
 
+        detect_series, detect_d_series, conc_series = {}, {}, {} # FIXME, just for init
+
         for i in range(total_count_upper+1):
             if not start+clip_len <= stop_time:
                 break
