@@ -4,6 +4,34 @@ import numpy as np
 from itertools import groupby
 import scipy.signal as sps
 import time
+from logging import getLogger, Formatter, StreamHandler, FileHandler, DEBUG, INFO, Logger
+
+# https://qiita.com/FukuharaYohei/items/92795107032c8c0bfd19
+def get_module_logger(module, log_dir, verbose=True, console_print=True):
+    logger = getLogger(module)
+
+    if not logger.hasHandlers():
+        if console_print:
+            logger = _set_handler(logger, StreamHandler(sys.stdout), verbose)
+        logger = _set_handler(logger, FileHandler(log_dir / "log.txt"), verbose)
+    logger.setLevel(DEBUG)
+    logger.propagate = False
+
+    return logger
+
+def _set_handler(logger, handler, verbose):
+    if verbose:
+        handler.setLevel(DEBUG)
+    else:
+        handler.setLevel(INFO)
+
+    handler.setFormatter(Formatter('%(funcName)s %(lineno)s [%(levelname)s]: %(message)s'))
+    logger.addHandler(handler)
+    return logger
+
+def killLogger(logger):
+    if not logger == None:
+        del Logger.manager.loggerDict[logger.name]
 
 def append_or_overwrite(ar, idx, obj):
     if len(ar) == idx:
