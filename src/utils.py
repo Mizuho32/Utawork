@@ -13,9 +13,9 @@ def append_or_overwrite(ar, idx, obj):
     else:
         raise IndexError(f"{idx} is out of array[{len(ar)}]")
 
-def print_judges(js): # FIXME: judges shoul be classed
-    print(">>", end="")
-    print(js2s(js, " ", "\n"))
+def judges2str(js): # FIXME: judges shoul be classed (implement __repl__
+    lf = "\n"
+    return f'>>{js2s(js, " ", lf)}'
 
 def js2s(js, prefix="", split=", "):
     return split.join(list(map(lambda t_j: f"{prefix}{sec2time(t_j[0])}: {repr(t_j[1])}", js.items())))
