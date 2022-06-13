@@ -760,19 +760,23 @@ class Recog:
             with open(save_dir / "metadata.yaml", 'r') as file:
                 metadata = yaml.safe_load(file)
 
-            i = len(metadata["cache_list"]) - 1 # last data index
+            idx = len(metadata["cache_list"]) - 1 # last data index
             means = list(map(lambda c: c["abs_mean"], metadata["cache_list"]))
 
-            with open(save_dir / metadata["cache_list"][i]["data"], 'rb') as file:
+            with open(save_dir / metadata["cache_list"][idx]["data"], 'rb') as file:
                 states = pickle.load(file)["states"]
 
-            if i > 0:
+            start = states["cur_time"]
+
+            if idx > 0:
                 wav_offset = Recog.last_cur_time(states["prev_c_results"])
+                if wav_offset > start: # FIXME: when detect_start happened at previous detection?
+                    wav_offset = start
+
             else:
                 wav_offset = start
 
-            start = states["cur_time"]
-            i += 1
+            idx += 1
 
         else:
             wav_offset = start
@@ -785,7 +789,7 @@ class Recog:
             else:
                 metadata = {"filename": filename, "delta": delta, "duration": duration, "mono": is_mono,
                             "sr": sr, "cache_list": []}
-            i = 0
+            idx = 0
 
 
         total_durat = librosa.get_duration(filename=filename)
@@ -793,7 +797,7 @@ class Recog:
 
         detect_series, detect_d_series, conc_series = {}, {}, {} # FIXME, just for init
 
-        for i in range(total_count_upper+1):
+        for i in range(idx, total_count_upper+1):
             if not start+clip_len <= stop_time:
                 break
 
