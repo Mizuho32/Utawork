@@ -12,6 +12,7 @@ require_relative '../ruby/utils'
 
 ######################################
 #### RUN test/server.rb FIRST!!!! ####
+# APP_ENV=development bundle exec ruby test/server.rb -l test/data/list.yaml
 ######################################
 
 Utils::DATA_DIR = Pathname("test") / Utils::DATA_DIR
@@ -191,6 +192,23 @@ class ServerTest < Test::Unit::TestCase
     v2p = JSON.parse( SELF.get("localhost:8001/video2process"), symbolize_names: true )
 
     assert(v2p.empty?)
+  end
+
+  test "Post video4 empty" do
+    SELF.post("localhost:8001/segments", {video_id: "test4id", segments: ""}.to_json)
+
+    sleep 0.01
+
+    assert(Dir.exist?("test/data/test4id"))
+    assert_equal("", File.read("test/data/test4id/segments.tsv"))
+  end
+
+  test "Post video4 non empty" do
+    SELF.post("localhost:8001/segments", {video_id: "test4id", segments: "1\t2\n2\t3"}.to_json)
+
+    sleep 0.01
+
+    assert_equal("1\t2\n2\t3", File.read("test/data/test4id/segments.tsv"))
   end
 
 
