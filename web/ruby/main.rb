@@ -13,7 +13,9 @@ require_relative 'utils'
 class App < Sinatra::Base
 
   configure :development do
-    Utils::DATA_DIR = Pathname("test") / Utils::DATA_DIR
+    if not Utils::DATA_DIR.each_filename.map{|f| f == "test"}.any? then
+      Utils::DATA_DIR = Pathname("test") / Utils::DATA_DIR
+    end
     register Sinatra::Reloader
 
     get '/restart' do
@@ -85,25 +87,30 @@ class App < Sinatra::Base
    id = data["video_id"].to_sym
    puts data
 
+   App.list[id] = {video_id: id} if not App.list[id]
    App.list[id][:lock] = false if App.list[id][:lock]
 
    txt =
    if data["segments"].empty? then
+     App.list[id][:segments_is_empty] = true
      status 501
      "Empty timestamp"
    else
-     Utils.save_segments(data["video_id"], data["segments"])
-     App.list[id][:has_segments] = true
+     App.list[id].delete(:segments_is_empty) if App.list[id].has_key?(:segments_is_empty)
      status 201
      "OK"
    end
+   Utils.save_segments(data["video_id"], data["segments"])
+   App.list[id][:has_segments] = true
 
    Utils.save_list(App.option[:list], App.list)
 
    txt
   rescue StandardError => ex
     status 500
-    "#{ex.message}\n#{Utils.remove_bundler(ex).join("\n")}"
+    err = "#{ex.message}\n#{Utils.remove_bundler(ex).join("\n")}"
+    puts err
+    err
   end
 
   get '/websocket' do
