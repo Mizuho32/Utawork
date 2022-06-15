@@ -91,12 +91,17 @@ module Utils
       hash
     }
 
-    Pathname(DATA_DIR).glob("*/").each{|dir|
-      id = dir.basename.to_s.to_sym
-      list[id][:has_segments] = true if list.has_key? id and (dir / SEGMENTS_FILE).exist?
-    }
+    return renew_list(list)
+  end
 
-    return list
+  def renew_list(list)
+    DATA_DIR.glob("*/").each{|dir|
+      id = dir.basename.to_s.to_sym
+      id_exists = list.has_key?(id)
+      list[id][:has_segments] = true if id_exists and (dir / SEGMENTS_FILE).exist?
+      list[id][:has_tags]     = true if id_exists and (dir / TAGS_FILE).exist?
+    }
+    list
   end
 
   def save_list(path, list)
