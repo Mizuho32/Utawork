@@ -53,6 +53,18 @@ class App < Sinatra::Base
     }
   end
 
+  get '/tagging' do
+    Utils.renew_list(App.list) # FIXME: should not access disk
+    erb :manual_list, locals: {list: App.list.values
+      .select{|item| item[:has_segments] and not item[:segments_is_empty] }
+      .sort{|l, r|
+        l = l[:has_tags] ? 1 : 0
+        r = r[:has_tags] ? 1 : 0
+        l <=> r
+      }
+    }
+  end
+
   get '/locked' do
     App.list.values.select{|item| item[:lock]}.map{|item| Utils.decode_videoinfo(item)}.to_json
   end

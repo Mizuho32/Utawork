@@ -1,0 +1,25 @@
+<table class="tablecss">
+  <thead>
+    <tr>
+      <th class="no">処理済み</th>
+      <th class="no">タイトル</th>
+      <th class="start">スマホ</th>
+      <th class="end">PC/タブレット</th>
+    </tr>
+  </thead>
+  <tbody id="stamps">
+    <% list.map{|item| %>
+      <tr>
+        <td><%= item[:has_tags] ? "Yes" : "No" %></td>
+        <td><%= item[:title] %></td>
+        <td>
+          <a href="/?video_id=<%= item[:video_id] %>&mobile=1" target="_blank" rel="noopener noreferrer">スマホ</a>
+        </td>
+        <td>
+          <a href="/?video_id=<%= item[:video_id] %>" target="_blank" rel="noopener noreferrer">PC/タブレット</a>
+        </td>
+      </tr>
+    <% } %>
+
+  </tbody>
+</table>
