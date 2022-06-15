@@ -52,7 +52,10 @@ def sec2time(sec, digit=1):
     if type(sec) in [int, float, np.float64]:
         power = 10**digit
         s, ms = divmod(sec*power, power)
-        return f'%s.%0{digit}d' % (time.strftime('%M:%S', time.gmtime(s)), ms)
+        if s >= 3600:
+            return f'%s.%0{digit}d' % (time.strftime('%H:%M:%S', time.gmtime(s)), ms)
+        else:
+            return f'%s.%0{digit}d' % (time.strftime('%M:%S', time.gmtime(s)), ms)
 
     elif type(sec) == list:
         return repr(list(map(lambda n: sec2time(n), sec)))
