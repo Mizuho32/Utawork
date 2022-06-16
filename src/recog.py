@@ -743,7 +743,10 @@ class Recog:
         return [*[min_interval]*min_count, *[big_interval]*big_count]
 
 
-    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[], cache_overwrite=False, console_print=True):
+    def detect_music_main(self, filename, save_dir, start, clip_len, delta, duration, ontology, interests, sr, is_mono=False, infer_series = {}, stop_time=np.infty, ignore_steps=[], cache_overwrite=False, console_print=True, cache_offset=-1):
+
+        self.is_mono = is_mono
+        self.filename = filename
 
         save_dir = pathlib.Path(save_dir)
         if not save_dir.exists():
@@ -760,7 +763,7 @@ class Recog:
             with open(save_dir / "metadata.yaml", 'r') as file:
                 metadata = yaml.safe_load(file)
 
-            idx = len(metadata["cache_list"]) - 1 # last data index
+            idx = len(metadata["cache_list"]) + cache_offset # last data index
             means = list(map(lambda c: c["abs_mean"], metadata["cache_list"]))
 
             with open(save_dir / metadata["cache_list"][idx]["data"], 'rb') as file:
