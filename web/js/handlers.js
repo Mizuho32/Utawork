@@ -199,7 +199,7 @@ function upload_tags(e) {
       let name = row.querySelector("input.name").value;
       let artist = row.querySelector("input.artist").value;
 
-      if (!name && !artist) { return ""; }
+      //if (!name && !artist) { return ""; } // should save raw data?
 
       let times = Array.from(row.querySelectorAll("input.time"))
         .map(time_input=>to_num(time_input.value))
