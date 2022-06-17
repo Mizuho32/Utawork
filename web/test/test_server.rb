@@ -1,3 +1,6 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
 require 'yaml'
 require 'json'
 require 'pathname'
@@ -25,7 +28,6 @@ class ServerTest < Test::Unit::TestCase
   LIST_YAML = "list.yaml"
 
   class << self
-    attr_accessor :list_yaml, :cache
 
     def get(uri, params = {})
       uri = URI("http://#{uri}")
@@ -56,6 +58,8 @@ class ServerTest < Test::Unit::TestCase
 			p e.message
     end
 
+    attr_accessor :list_yaml, :cache, :ws
+
     def startup 
       Utils.init()
       SELF.cache = {}
@@ -63,6 +67,7 @@ class ServerTest < Test::Unit::TestCase
       system("cp -r #{Utils::DATA_DIR}.model/ #{Utils::DATA_DIR}")
 
       @list_yaml = YAML.unsafe_load_file(Utils::DATA_DIR / LIST_YAML).map{|item| Utils.decode_videoinfo(item)}
+
       sleep 0.5
       get("localhost:8001/restart")
     rescue Errno::ECONNREFUSED, EOFError => ex
@@ -211,6 +216,41 @@ class ServerTest < Test::Unit::TestCase
     assert_equal("1\t2\n2\t3", File.read("test/data/test4id/segments.tsv"))
   end
 
+  test "Tagging lock" do
+    require 'websocket-client-simple'
+    @@ws = WebSocket::Client::Simple.connect('ws://localhost:8001/websocket')
+
+    @@tagging_lock = DateTime.now
+    puts "LOCK is #{@@tagging_lock.iso8601}"
+    SELF.cache[:ret] = nil
+    @@ws.on(:message) {|e| SELF.cache[:ret] = e.data }
+
+    assert( !SELF.get('localhost:8001', {video_id: "test4id"}).force_encoding('UTF-8') .include?("作業中") )
+    @@ws.send({lock: @@tagging_lock, video_id: "test4id"}.to_json)
+    sleep 0.1
+
+    assert(SELF.cache[:ret] == @@tagging_lock.iso8601)
+    assert(SELF.get('localhost:8001', {video_id: "test4id"}).force_encoding('UTF-8').include?("作業中"))
+  end
+
+  test "With incorrect lock param" do
+    assert(SELF.get('localhost:8001', {video_id: "test4id", lock: (@@tagging_lock+1).iso8601}).force_encoding('UTF-8').include?("作業中"))
+  end
+
+  test "With correct lock param" do
+    assert(!SELF.get('localhost:8001', {video_id: "test4id", lock: @@tagging_lock.iso8601}).force_encoding('UTF-8').include?("作業中"))
+  end
+
+  test "Tagging unlock" do
+    SELF.cache[:ret] = nil
+    @@ws.on(:message) {|e| SELF.cache[:ret] = e.data }
+
+    @@ws.send({unlock: @@tagging_lock, video_id: "test4id"}.to_json)
+    sleep 0.1
+
+    assert(SELF.cache[:ret] == @@tagging_lock.iso8601)
+    assert(!SELF.get('localhost:8001', {video_id: "test4id"}).force_encoding('UTF-8').include?("作業中"))
+  end
 
   #assert_nil(c.block)
 end
