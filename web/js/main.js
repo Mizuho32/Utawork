@@ -30,10 +30,37 @@ function playVideo() {
 }
 
 
-var lock = undefined;
 var url;
+let lock, locked;
 window.onload = ()=>{
   url = new URL(location.href);
+
+  // get lock
+  let video_id = url.searchParams.get("video_id");
+  if (video_id) {
+    setTimeout(function (){
+      [lock, locked] = get_lock(url)
+
+      if (!locked) {
+        url.searchParams.set("lock", lock);
+        window.history.pushState(null, document.title, url.search);
+
+        ws_ensure(
+          (socket, e)=>socket.send(JSON.stringify({lock: lock, video_id: video_id})),
+          (e)=>{
+            if (e.data != lock) {
+              alert("ロック取得失敗。他の人が作業中の可能性があります");
+              lock = "";
+            }
+          },
+          ()=> {
+            alert("ロック取得がタイムアウト。他の人が作業中の可能性があります");
+            lock = "";
+          },
+          1000);
+      }
+    }, 1000);
+  }
 
   if (url.searchParams.get("nonPC")) {
     mobile = true;
@@ -42,8 +69,6 @@ window.onload = ()=>{
   if (!url.searchParams.get("notgl") && is_mobile_html()) {
     toggle_info(true); // open
   }
-
-
 
   let times = document.querySelector("#raw_times_input").textContent;
   if (times) {
@@ -59,4 +84,41 @@ window.onload = ()=>{
       }
     }
   }
+
+  //if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) { // Safari. 🖕 🍎
+  //  window.onpagehide = onclose;
+  //}
 };
+
+window.onbeforeunload = function (e) {
+    e = e || window.event;
+
+    onclose();
+
+    // For IE and Firefox prior to version 4
+    if (e) {
+        e.returnValue = '閉じます';
+    }
+
+    // For Safari
+    return '閉じます';
+};
+
+function onclose() {
+
+  let video_id = url.searchParams.get("video_id");
+  if (lock) {
+    ws_ensure(
+      (socket, e)=>socket.send(JSON.stringify({unlock: lock, video_id: video_id})),
+      (e)=>{
+        if (e.data == lock) {
+          lock = "";
+          url.searchParams.set("lock", "none");
+          window.history.pushState(null, document.title, url.search);
+        }
+      },
+      ()=> {},
+      1000);
+  }
+
+}

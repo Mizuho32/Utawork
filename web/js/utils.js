@@ -187,3 +187,44 @@ function sort_item() {
     })
     .forEach(tr=>table.appendChild(tr));
 }
+
+
+function isInvalidDate(date) {
+  return Number.isNaN(date.getTime());
+}
+
+// url -> lock, already_locked?
+function get_lock(url) {
+  let l = url.searchParams.get("lock");
+  console.log({l}, !!l);
+
+  if (!l) { // no lock
+    return [(new Date()).toISOString(), false];
+  } else {
+    let d = new Date(l);
+    if (isInvalidDate(d)) { // invalid lock
+      return [(new Date()).toISOString(), false];
+    } else {
+      return [d.toISOString(), true];
+    }
+  }
+}
+
+function ws_ensure(onopen, onmessage, ontimeout, timeout) {
+  // send
+  let socket = new WebSocket(`ws://${location.host}/websocket`);
+  socket.onopen = function(e) {
+    onopen(socket, e);
+  };
+
+  let timeout_id = setTimeout(()=>{
+    ontimeout();
+    socket.close();
+  }, timeout);
+
+  socket.onmessage = function(e) {
+    clearTimeout(timeout_id);
+    onmessage(e);
+    socket.close();
+  }
+}

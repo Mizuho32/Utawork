@@ -229,6 +229,10 @@ function upload_tags(e) {
     let num = parseInt(event.data);
     if (num == ar.length) {
       alert("アップロード完了");
+
+      // unlock
+      onclose();
+
     } else {
       alert(`Error: ${event.data}`);
     }
