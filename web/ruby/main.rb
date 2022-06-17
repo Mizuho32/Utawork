@@ -41,6 +41,14 @@ class App < Sinatra::Base
     is_mobile = params.key?("mobile")
     video_id, segments = Utils.load_segments(params["video_id"].to_s)
 
+    video_info = App.list[video_id.to_sym]
+    if video_info then
+      tagging_lock = video_info[:tagging_lock]
+      unlock = (not params["lock"].nil? and params["lock"] == tagging_lock)
+      #p params["lock"], tagging_lock
+      return erb(:now_tagging, locals: video_info) if tagging_lock.is_a?(String) and not unlock # locked
+    end
+
     locals = {
       :css =>  is_mobile ? "mobile.css" : "style.css",
       is_mobile: is_mobile, raw_times: segments, video_id: video_id
@@ -159,6 +167,20 @@ class App < Sinatra::Base
             rescue StandardError => ex
               puts ex.message, Utils.remove_bundler(ex).join("\n")
               ws.send(ex.message);
+            end
+          elsif query.key? "lock" then
+            id = query["video_id"].to_sym
+            if info = App.list[id] then
+              info[:tagging_lock] = query["lock"]
+              Utils.save_list(App.option[:list], App.list)
+              ws.send(query["lock"]);
+            end
+          elsif query.key? "unlock" then
+            id = query["video_id"].to_sym
+            if info = App.list[id] and info[:tagging_lock]==query["unlock"] then
+              info.delete(:tagging_lock)
+              Utils.save_list(App.option[:list], App.list)
+              ws.send(query["unlock"]);
             end
           end
         rescue StandardError => ex
