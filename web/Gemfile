@@ -12,4 +12,6 @@ group :develop do
   gem 'rdoc'
   gem "google-apis-youtube_v3"
   gem 'test-unit'
+  #gem "faye-websocket"
+  gem 'websocket-client-simple'
 end
