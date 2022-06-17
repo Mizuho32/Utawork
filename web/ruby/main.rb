@@ -170,14 +170,20 @@ class App < Sinatra::Base
             end
           elsif query.key? "lock" then
             id = query["video_id"].to_sym
-            if info = App.list[id] then
+            info = App.list[id]
+            puts "lock #{id}: #{query["lock"]}"
+            if info && !info&.key?(:tagging_lock) then
               info[:tagging_lock] = query["lock"]
               Utils.save_list(App.option[:list], App.list)
               ws.send(query["lock"]);
+            else
+              ws.send("lock failed");
             end
           elsif query.key? "unlock" then
             id = query["video_id"].to_sym
-            if info = App.list[id] and info[:tagging_lock]==query["unlock"] then
+            info = App.list[id]
+            puts "unlock #{id}: #{query["unlock"]}"
+            if info && info[:tagging_lock]==query["unlock"] then
               info.delete(:tagging_lock)
               Utils.save_list(App.option[:list], App.list)
               ws.send(query["unlock"]);
