@@ -30,21 +30,27 @@ function playVideo() {
 }
 
 
+var lock = undefined;
+var url;
 window.onload = ()=>{
-  if (location.search.match(/(?:\?|&)nonPC=/)) {
+  url = new URL(location.href);
+
+  if (url.searchParams.get("nonPC")) {
     mobile = true;
   }
 
-  if (!location.search.match(/(?:\?|&)notgl=/) && is_mobile_html()) {
+  if (!url.searchParams.get("notgl") && is_mobile_html()) {
     toggle_info(true); // open
   }
+
+
 
   let times = document.querySelector("#raw_times_input").textContent;
   if (times) {
     load_segments(times);
     document.querySelector("#segments").checked = true;
   } else {
-    if (location.search.match(/(?:\?|&)d=/)) {
+    if (url.searchParams.get("d")) {
       let table = document.querySelector("#stamps");
       let len = 10;
       for (let i = 0; i < len; i++) {
