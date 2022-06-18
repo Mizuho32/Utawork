@@ -248,20 +248,35 @@ class Recog:
 
         return abst_scores, conc_scores, result
 
+    # FIXME: wav should be instance variable, otherwise many times load happends
     def slice_wav(self, wav, sr, start, end):
         slice_start = int(sr*(start - self.wav_offset))
         slice_end   = int(sr*(end   - self.wav_offset))
 
         if slice_start < 0 or slice_end > wav.shape[-1]:
-            Recog.logger.warn(f"Invalid slice {slice_start}:{slice_end} for {wav.shape}")
-            length = self.wav_offset - start  +1
-            self.wav_offset = start  -1
+            Recog.logger.warn(f"Invalid slice {slice_start}:{slice_end} for {wav.shape} ({start}:{end} for {self.total_durat})")
+            if slice_start < 0:
+                old_wav_offset = self.wav_offset
 
-            tmp_wav, _ = librosa.load(self.filename, sr=sr, mono=self.is_mono, offset=self.wav_offset, duration=length)
-            Recog.logger.debug(f"mono: {self.is_mono}, delta: {tmp_wav.shape}, wav: {wav.shape}")
+                self.wav_offset = max(start  -1, 0)
+                length = old_wav_offset - self.wav_offset
 
-            if (tmp_wav.shape[0] != 0): #empty
-              wav = np.concatenate([tmp_wav, wav], axis=-1)
+                Recog.logger.debug(f"-deltaload offset: {self.wav_offset}, duration:{length}")
+                tmp_wav, _ = librosa.load(self.filename, sr=sr, mono=self.is_mono, offset=self.wav_offset, duration=length)
+
+                wav = np.concatenate([tmp_wav, wav], axis=-1)
+
+            if slice_end > wav.shape[-1]:
+                if end > self.total_durat:
+                    end = self.total_durat
+
+                tmp_wav_offset = self.wav_offset + wav.shape[-1]/sr
+                length = end - tmp_wav_offset
+
+                Recog.logger.debug(f"+deltaload offset: {tmp_wav_offset}, duration:{length}")
+                tmp_wav, _ = librosa.load(self.filename, sr=sr, mono=self.is_mono, offset=tmp_wav_offset, duration=length)
+                Recog.logger.debug(f"delta: {tmp_wav.shape}, wav: {wav.shape}")
+                wav = np.concatenate([wav, tmp_wav], axis=-1)
 
             return Recog.slice_wav(self, wav, sr, start, end)
 
@@ -807,8 +822,8 @@ class Recog:
             idx = 0
 
 
-        total_durat = librosa.get_duration(filename=filename)
-        total_count_upper = int(np.ceil(total_durat/clip_len))
+        self.total_durat = librosa.get_duration(filename=filename)
+        total_count_upper = int(np.ceil(self.total_durat/clip_len))
 
         detect_series, detect_d_series, conc_series = {}, {}, {} # FIXME, just for init
 
