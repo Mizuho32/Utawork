@@ -250,6 +250,9 @@ class Recog:
 
     # FIXME: wav should be instance variable, otherwise many times load happends
     def slice_wav(self, wav, sr, start, end):
+        if wav is None:
+            wav = self.wav #FIXME
+
         slice_start = int(sr*(start - self.wav_offset))
         slice_end   = int(sr*(end   - self.wav_offset))
 
@@ -267,6 +270,7 @@ class Recog:
                 wav = np.concatenate([tmp_wav, wav], axis=-1)
 
             if slice_end > wav.shape[-1]:
+                end += 10 # FIXME: parametrize
                 if end > self.total_durat:
                     end = self.total_durat
 
@@ -278,7 +282,9 @@ class Recog:
                 Recog.logger.debug(f"delta: {tmp_wav.shape}, wav: {wav.shape}")
                 wav = np.concatenate([wav, tmp_wav], axis=-1)
 
-            return Recog.slice_wav(self, wav, sr, start, end)
+            self.wav = wav
+
+            return Recog.slice_wav(self, self.wav, sr, start, end)
 
 
 
@@ -492,7 +498,8 @@ class Recog:
             detect_back_target = None, entire_abs_mean = 0 ):
 
         self.wav_offset = wav_offset
-        entire_abs_mean = entire_abs_mean or np.abs(wav).mean()
+        self.wav = wav
+        entire_abs_mean = entire_abs_mean or np.abs(self.wav).mean()
 
         result = {}
         result_d = {}
@@ -509,19 +516,20 @@ class Recog:
             for event_time, state in judges.items():
                 result[event_time] = state
 
-        wav_len = wav.shape[-1]
+        wav_len = self.wav.shape[-1]
+        self_wav = None # FIXME
 
         while cur_time < stop and sr*(cur_time+duration - wav_offset) < wav_len:
 
             # do inference
             try:
-                judges, c_result = Recog.judge_segment(self, ontology, series, cur_time, delta, duration, wav, sr, ontology, interests)
+                judges, c_result = Recog.judge_segment(self, ontology, series, cur_time, delta, duration, self_wav, sr, ontology, interests)
             except IndexError as ex:
                 print(ex)
                 raise ex
                 break
 
-            cur_abs_mean = np.abs(Recog.slice_wav(self, wav, sr, cur_time, cur_time+duration)).mean()
+            cur_abs_mean = np.abs(Recog.slice_wav(self, self_wav, sr, cur_time, cur_time+duration)).mean()
 
             Recog.logger.debug(utils.judges2str(judges))
 
@@ -546,7 +554,7 @@ class Recog:
                 # ! Music -> Music
                 if Label.Music_Start in label or Label.Music_Already_Start in label: # music start or InPro
                     is_starting, next_cur_time, judgess, c_results = \
-                        Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, wav, sr, ontology, interests, thres=thres)
+                        Recog.is_music_starting(self, series, cur_time, delta, duration, music_check_len, min_interval, self_wav, sr, ontology, interests, thres=thres)
                     if is_starting:
                         interval_plan = [*Recog.interval_plan(music_length, big_interval, min_interval), next_cur_time - cur_time]
                 #elif Music_End_withno_Start in label:
@@ -586,7 +594,7 @@ class Recog:
                         back_prev_judge = back_prev_js_d[back_end]
                         Recog.logger.debug(f" {trial}th trial {utils.sec2time(back_start)} {cur_judge}->{utils.sec2time(back_end)} {back_prev_js_d}")
 
-                        detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, back_prev_js_d, detect_back_target, series, back_start, delta, duration, back_end, wav, sr, ontology, interests, thres = thres)
+                        detected_judge, d_js, tmp_j, tmp_c = Recog.back_to_change(self, back_prev_js_d, detect_back_target, series, back_start, delta, duration, back_end, self_wav, sr, ontology, interests, thres = thres)
 
                         try:
                             if d_js and d_js[-1][back_start] != cur_judge: # back_start nearest one has back_start time event
