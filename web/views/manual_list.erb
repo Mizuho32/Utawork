@@ -1,25 +1,39 @@
-<table class="tablecss">
-  <thead>
-    <tr>
-      <th class="no">処理済み</th>
-      <th class="no">タイトル</th>
-      <th class="start">スマホ</th>
-      <th class="end">PC/タブレット</th>
-    </tr>
-  </thead>
-  <tbody id="stamps">
-    <% list.map{|item| %>
-      <tr>
-        <td><%= item[:has_tags] ? "Yes" : "No" %></td>
-        <td><%= item[:title] %></td>
-        <td>
-          <a href="/?video_id=<%= item[:video_id] %>&mobile=1" target="_blank" rel="noopener noreferrer">スマホ</a>
-        </td>
-        <td>
-          <a href="/?video_id=<%= item[:video_id] %>" target="_blank" rel="noopener noreferrer">PC/タブレット</a>
-        </td>
-      </tr>
-    <% } %>
+<!DOCTYPE html>
+<html>
+  <head>
+      <title>timestamp tagger</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 
-  </tbody>
-</table>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
+  <body>
+    <table class="tablecss">
+      <thead>
+        <tr>
+          <th ></th>
+          <th >タイトル</th>
+        </tr>
+      </thead>
+      <tbody id="stamps">
+        <% list.map{|item| %>
+          <tr>
+          <% if item[:tagging_lock] then %>
+            <td><i class="fa-solid fa-lock"></i></td>
+          <% elsif item[:has_tags] %>
+            <td><i class="fa-solid fa-check"></i></td>
+          <% else %>
+            <td><i class="fa-solid fa-xmark"></i></td>
+          <% end %>
+            <td>
+              <a href="/?video_id=<%= item[:video_id] %><%= is_mobile %>&lock=none" target="_blank" rel="noopener noreferrer">
+                <%= (item[:title]||"No title")[0...25] %>
+              </a>
+            </td>
+          </tr>
+        <% } %>
+
+      </tbody>
+    </table>
+  </body>
+</html>
