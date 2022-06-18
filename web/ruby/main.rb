@@ -63,12 +63,14 @@ class App < Sinatra::Base
 
   get '/tagging' do
     Utils.renew_list(App.list) # FIXME: should not access disk
-    erb :manual_list, locals: {list: App.list.values
-      .select{|item| item[:has_segments] and not item[:segments_is_empty] }
-      .sort{|l, r|
-        l, r = [l,r].map{|term| %i[has_tags tagging_lock].map{|k| term[k] ? 1 : 0}.sum}
-        l <=> r
-      }
+    erb :manual_list, locals: {
+      is_mobile: params.key?("mobile") ? "&mobile=1" : "",
+      list: App.list.values
+        .select{|item| item[:has_segments] and not item[:segments_is_empty] }
+        .sort{|l, r|
+          l, r = [l,r].map{|term| %i[has_tags tagging_lock].map{|k| term[k] ? 1 : 0}.sum}
+          l <=> r
+        }
     }
   end
 
