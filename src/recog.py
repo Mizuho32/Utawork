@@ -256,8 +256,12 @@ class Recog:
             Recog.logger.warn(f"Invalid slice {slice_start}:{slice_end} for {wav.shape}")
             length = self.wav_offset - start  +1
             self.wav_offset = start  -1
+
             tmp_wav, _ = librosa.load(self.filename, sr=sr, mono=self.is_mono, offset=self.wav_offset, duration=length)
-            wav = np.concatenate([tmp_wav, wav], axis=-1)
+            Recog.logger.debug(f"mono: {self.is_mono}, delta: {tmp_wav.shape}, wav: {wav.shape}")
+
+            if (tmp_wav.shape[0] != 0): #empty
+              wav = np.concatenate([tmp_wav, wav], axis=-1)
 
             return Recog.slice_wav(self, wav, sr, start, end)
 
