@@ -233,11 +233,30 @@ class ServerTest < Test::Unit::TestCase
     assert(SELF.get('localhost:8001', {video_id: "test4id"}).force_encoding('UTF-8').include?("作業中"))
   end
 
-  test "With incorrect lock param" do
+  test "With incorrect lock param back" do
+    SELF.cache[:ret] = nil
+    @@ws.on(:message) {|e| SELF.cache[:ret] = e.data }
+    key = (@@tagging_lock+1).iso8601
+    @@ws.send({tags: [%w[a b 0 0]], key: key, video_id: "test4id"}.to_json)
+    sleep 0.1
+
+    assert_equal("Invalid lock #{key}", SELF.cache[:ret].force_encoding('UTF-8'))
+  end
+
+  test "With correct lock param back" do
+    SELF.cache[:ret] = nil
+    @@ws.on(:message) {|e| SELF.cache[:ret] = e.data }
+    @@ws.send({tags: [%w[c d 1 1]], key: @@tagging_lock.iso8601, video_id: "test4id"}.to_json)
+    sleep 0.1
+
+    assert_equal(1, SELF.cache[:ret].force_encoding('UTF-8').to_i)
+  end
+
+  test "With incorrect lock param front" do
     assert(SELF.get('localhost:8001', {video_id: "test4id", lock: (@@tagging_lock+1).iso8601}).force_encoding('UTF-8').include?("作業中"))
   end
 
-  test "With correct lock param" do
+  test "With correct lock param front" do
     assert(!SELF.get('localhost:8001', {video_id: "test4id", lock: @@tagging_lock.iso8601}).force_encoding('UTF-8').include?("作業中"))
   end
 
