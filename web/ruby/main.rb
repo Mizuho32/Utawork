@@ -66,8 +66,7 @@ class App < Sinatra::Base
     erb :manual_list, locals: {list: App.list.values
       .select{|item| item[:has_segments] and not item[:segments_is_empty] }
       .sort{|l, r|
-        l = l[:has_tags] ? 1 : 0
-        r = r[:has_tags] ? 1 : 0
+        l, r = [l,r].map{|term| %i[has_tags tagging_lock].map{|k| term[k] ? 1 : 0}.sum}
         l <=> r
       }
     }
@@ -158,12 +157,18 @@ class App < Sinatra::Base
             end
           elsif query.key? "tags" then
             begin
-              tags = JSON.parse(query["tags"])
-              vid = query["video_id"]
-              puts("tags: #{tags}, id:#{vid}")
-              Utils.save_tags(vid, tags)
+              tags = query["tags"]
+              vid, key = query["video_id"], query["key"]
 
-              ws.send(tags.size.to_s);
+              puts("tags: #{tags}, id:#{vid}, key:#{key}")
+              info = App.list[vid.to_sym]
+
+              if info && info.key?(:tagging_lock) && info[:tagging_lock] != key then # locked but invalid lock
+                ws.send("Invalid lock #{key}");
+              else # allow even if no locked
+                Utils.save_tags(vid, tags)
+                ws.send(tags.size.to_s);
+              end
             rescue StandardError => ex
               puts ex.message, Utils.remove_bundler(ex).join("\n")
               ws.send(ex.message);
