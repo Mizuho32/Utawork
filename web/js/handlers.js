@@ -214,9 +214,8 @@ function upload_tags(e) {
   // send
   let socket = new WebSocket(`ws://${location.host}/websocket`);
   socket.onopen = function(e) {
-    let tags = JSON.stringify(ar);
     socket.send(
-      JSON.stringify({tags: tags, video_id: url2id(document.querySelector("#video_url").value)}) );
+      JSON.stringify({tags: ar, video_id: url2id(document.querySelector("#video_url").value), key: lock}) );
   };
 
   let timeout_id = setTimeout(()=>{
