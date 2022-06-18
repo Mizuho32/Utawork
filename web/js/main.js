@@ -37,7 +37,7 @@ window.onload = ()=>{
 
   // get lock
   let video_id = url.searchParams.get("video_id");
-  if (video_id) {
+  if (video_id && url.searchParams.get("lock")) {
     setTimeout(function (){
       [lock, locked] = get_lock(url)
 
@@ -88,7 +88,17 @@ window.onload = ()=>{
   //if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) { // Safari. 🖕 🍎
   //  window.onpagehide = onclose;
   //}
+  //window.addEventListener('beforeunload', (event) => {
+  //  //Cancel the event as stated by the standard.
+  //  event.preventDefault();
+  //  // Chrome requires returnValue to be set.
+  //  event.returnValue = 'Hello2';
+
+  //  onclose();
+  //  return "HI";
+  //});
 };
+
 
 window.onbeforeunload = function (e) {
     e = e || window.event;
@@ -108,6 +118,9 @@ function onclose() {
 
   let video_id = url.searchParams.get("video_id");
   if (lock) {
+    //let socket = new WebSocket(`ws://${location.host}/websocket`);
+    //socket.send(JSON.stringify({unlock: lock, video_id: video_id}));
+
     ws_ensure(
       (socket, e)=>socket.send(JSON.stringify({unlock: lock, video_id: video_id})),
       (e)=>{
@@ -115,9 +128,13 @@ function onclose() {
           lock = "";
           url.searchParams.set("lock", "none");
           window.history.pushState(null, document.title, url.search);
+        } else {
+          alert(`ロック解除失敗。報告してください。\n${video_id}`);
         }
       },
-      ()=> {},
+      ()=> {
+          alert(`ロック解除タイムアウト。報告してください。\n${video_id}`);
+      },
       1000);
   }
 
