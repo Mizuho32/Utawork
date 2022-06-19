@@ -302,7 +302,12 @@ function info_toggle(e) {
 
 function add_item(e) {
   let table = document.querySelector("#stamps");
-  let newone = insert_row(table, -1, 0, 0);
+  let time = (player?.getCurrentTime() || 0);
+  let newone = insert_row(table, -1, time, time);
+
+  if (time !== 0)
+    sort_item();
+
   let y = newone.getBoundingClientRect().bottom;
   table.closest("#segments_content").scrollBy(0, y);
 }
