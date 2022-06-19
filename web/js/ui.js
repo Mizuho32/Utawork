@@ -27,7 +27,7 @@ function gen_timeinput(value, is_start=true) {
     let div = `<div class="time ${startend}">`;
     return `${div}${timeinput_nonPC(value, is_start)}</div>`;
   } else {
-    return `<input type="time" class="time ${startend}" value="${value}" onchange="timechange(event);" />`;
+    return `<input type="time" class="time ${startend}" value="${value}" onchange="timechange(event);" onkeyup="timeinput_keyup(event);" />`;
   }
 }
 

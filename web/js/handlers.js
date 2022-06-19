@@ -69,12 +69,17 @@ function extract_word(e) {
   }, 1000);
 }
 
+// apply current yt time to time input
 function touchend(e) {
   if (player) e.target.value = to_time(player.getCurrentTime());
   timechange(e, false); // no seek
 }
 
+
+
 // time utils
+
+// update length of segment
 function timechange(e, seek=true) {
   // e.target == input
   let item = e.target.closest(".item");
@@ -97,6 +102,17 @@ function changetime(e, delta) {
   let input = cntner.querySelector("input");
   input.value = to_time(to_num(input.value)+delta);
   timechange({target: input});
+}
+
+// seek and apply current time to timeinput
+function timeinput_keyup(e) {
+  if (!player) return;
+
+  if (e.key == "a") { // apply current time
+    touchend(e);
+  } else if (e.key == "s") { // seek to time
+    seek_to({target: e.target.parentElement}); // for seek_to(e) that looks parent -> child to find time input
+  }
 }
 
 
