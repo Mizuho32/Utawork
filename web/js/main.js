@@ -101,8 +101,9 @@ window.onload = ()=>{
 
 
 window.onbeforeunload = function (e) {
-    e = e || window.event;
+  e = e || window.event;
 
+  if (lock) {
     onclose();
 
     // For IE and Firefox prior to version 4
@@ -112,6 +113,7 @@ window.onbeforeunload = function (e) {
 
     // For Safari
     return '閉じます';
+  }
 };
 
 function onclose() {
