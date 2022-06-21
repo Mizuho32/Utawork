@@ -46,8 +46,11 @@ function to_time(num, digit=3) {
 }
 
 function to_num(time) {
-  return time
-    .split(":")
+  let splitten = time.split(":")
+  if (splitten.length == 2) // Chrome && second == 0
+    splitten.push("00");
+
+  return splitten
     .reverse()
     .map((s,i) => 60**i * parseInt(s))
     .reduce((el, sum)=>el+sum, 0)
