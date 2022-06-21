@@ -126,7 +126,7 @@ function detectMobile() {
 
      mobile = toMatch.some((toMatchItem) => {
        return navigator.userAgent.match(toMatchItem);
-     });
+     }) && !navigator.userAgent.match(/Windows|Linux|Macintosh/i);
   }
 
   return mobile;
