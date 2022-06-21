@@ -25,8 +25,9 @@ function onPlayerStateChange(event) {
 
 function load_video(id) {
   console.log(`load video ${id}`);
-  let width = is_mobile_html() ? screen.width : screen.width / 2;
-  let height = is_mobile_html() ? screen.height*0.2 : screen.height *0.5;
+  let rect = document.querySelector("#player_container").getBoundingClientRect();
+  let width  = rect.width;
+  let height = rect.height;
   return new YT.Player('player', {
     height: String(height),
     width:  String(width),
