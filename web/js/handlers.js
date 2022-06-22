@@ -313,7 +313,11 @@ function add_item(e) {
 }
 
 function delete_item_handle(e) {
-  if (confirm("選択した項目を削除します")) {
-    delete_item(e);
+  try{
+    if (confirm("選択した項目を削除します")) {
+      delete_item(e);
+    }
+  } catch (e) {
+    display_pane(`<h2>${e}</h2>\n${ e.stack.split("\n").map(el=> el+"</br>") }`);
   }
 }
