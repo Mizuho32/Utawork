@@ -11,6 +11,8 @@ function apply_tablerow_shortcuts(row) {
       }
     } else if (e.ctrlKey && e.keyCode == 13) { // Ctrl+Enter -> search word
       search(e.target.value);
+    }else if (e.keyCode == 37 || e.keyCode == 39) { // <- or ->, seek video +-5 sec
+      delta_seek( (e.keyCode - 38)*5 );
     } else if (e.keyCode == 40 || e.keyCode == 38 || e.keyCode == 9) { // down or up
 
       let current_row = e.target.closest("tr.item");
