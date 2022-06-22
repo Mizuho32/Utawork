@@ -81,19 +81,25 @@ function search(word) {
     };
 
     socket.onmessage = function(event) {
-      let div = document.querySelector('#search > div')
-      div.innerHTML = event.data;
-      div.querySelectorAll("a").forEach(a=>{
-        a.removeAttribute("href");
-        a.setAttribute("tabindex", "-1");
+      display_pane(event.data, (div) =>{
+        div.querySelectorAll("a").forEach(a=>{
+          a.removeAttribute("href");
+          a.setAttribute("tabindex", "-1");
+        });
       });
-      div.querySelector("#footcnt")?.remove();
 
       if (is_mobile_html()) toggle_info(true);
       socket.close();
     };
 
   }
+}
+
+function display_pane(html, postprocess) {
+  let div = document.querySelector('#search > div')
+  div.innerHTML = html;
+  if (postprocess) postprocess(div);
+  if (is_mobile_html()) toggle_info(true);
 }
 
 function escapeRegex(string) {
