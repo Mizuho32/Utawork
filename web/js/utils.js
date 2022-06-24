@@ -132,11 +132,23 @@ function detectMobile() {
            /Safari/i,
            /BlackBerry/i,
            /Windows Phone/i
-     ];
+    ];
 
-     mobile = toMatch.some((toMatchItem) => {
-       return navigator.userAgent.match(toMatchItem);
-     }) && !navigator.userAgent.match(/Windows|Linux/i);
+    let to_match = toMatch.some((toMatchItem) => {
+      return navigator.userAgent.match(toMatchItem);
+    });
+    let windows = navigator.userAgent.match(/Windows/i);
+    let linux   = navigator.userAgent.match(/Linux/i);
+
+    if (to_match) {
+      if (linux || (!linux && !windows) ) // Android or iOS
+        mobile = true;
+      else
+        mobile = false;
+    } else {
+        mobile = false;
+    }
+
   }
 
   return mobile;
