@@ -17,3 +17,8 @@ APP_ENV=production bundle exec ruby server.rb -l data/list.yaml
 ```bash
 APP_ENV=development bundle exec ruby test/server.rb
 ```
+
+## Export for vsonglister
+```bash
+bundle exec ruby ruby/export.rb data/ y gsheet_gen/data/UCopMhlXMdVAQOWQhDCdqQmw/
+```
