@@ -74,6 +74,27 @@ class App < Sinatra::Base
     }
   end
 
+  get '/tagcommenting' do
+    if params.empty? then
+      erb :comment_list, locals: {
+        list: App.list.values
+          .select{|item| item[:has_tags] }
+      }
+    else
+      vid = params["video_id"]
+      list = App.list.values
+      tags = Utils.load_tags(vid)
+      idx  = list.each_with_index.select{|el, i| el[:video_id] == vid}.first.last
+      current = list[idx]
+      prev, nxt = list[idx+1], list[idx-1]
+
+      erb :tagcomment, locals: {
+        tags: tags.select{|st,en,name,artist| !name.empty? && !artist.empty?},
+        current: current, prev: prev, nxt: nxt
+      }
+    end
+  end
+
   get '/locked' do
     App.list.values.select{|item| item[:lock]}.map{|item| Utils.decode_videoinfo(item)}.to_json
   end

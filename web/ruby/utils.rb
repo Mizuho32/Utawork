@@ -56,6 +56,11 @@ module Utils
     return id, text
   end
 
+  def load_tags(vid)
+    dir = ensure_dir(vid)
+    return CSV.read(dir/TAGS_FILE)
+  end
+
   def ensure_dir(vid)
     id = video_id(vid)
     dir = DATA_DIR / id
