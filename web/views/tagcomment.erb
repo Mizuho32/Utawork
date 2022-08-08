@@ -9,7 +9,12 @@
     <script src="js/tagcomment.js"></script>
   </head>
   <body style="display: flex;">
-    <h1><%= current[:title] %></h1>
+    <h1>
+      <a href="https://youtube.com/watch?v=<%= current[:video_id] %>" target="_blank" rel="noopener noreferrer">
+        <%= current[:title] %>
+      </a>
+    </h1>
+
     <pre><code><%= tags.map{|st,en,name,artist|
                   "#{st} - #{en} #{name.strip} / #{artist.strip}"
             }.join("\n") %></code></pre>
