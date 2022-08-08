@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Commenter</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+    <link href="css/tagcomment.css" type="text/css" rel="stylesheet" />
+
+    <script src="js/tagcomment.js"></script>
+  </head>
+  <body style="display: flex;">
+    <h1><%= current[:title] %></h1>
+    <pre><code><%= tags.map{|st,en,name,artist|
+                  "#{st} - #{en} #{name.strip} / #{artist.strip}"
+            }.join("\n") %></code></pre>
+    <button onclick="copypaste()">Copy&#38;Paste</button>
+    <div>
+    <% if prev then %>
+      <a href="?video_id=<%= prev[:video_id] %>" target="_blank" rel="noopener noreferrer">
+        前: <%= (prev[:title]||"No title")[0..15] %></a>
+    <% end %>
+    <% if nxt then %>
+      <a href="?video_id=<%= nxt[:video_id] %>" target="_blank" rel="noopener noreferrer">
+        後: <%= (nxt[:title]||"No title")[0..15] %></a>
+    <% end %>
+  </body>
+</html>

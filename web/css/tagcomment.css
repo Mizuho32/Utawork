@@ -1,0 +1,15 @@
+body {
+  height: 50%;
+
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  height: 5em;
+}
+
+div {
+  display: flex;
+  justify-content: space-between;
+}

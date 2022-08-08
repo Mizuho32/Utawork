@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <title>Commenter</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+  </head>
+  <body>
+    <table class="tablecss">
+      <thead>
+        <tr>
+          <th ></th>
+          <th >タイトル</th>
+        </tr>
+      </thead>
+      <tbody id="stamps">
+        <% list.map{|item| %>
+          <tr>
+            <td>
+              <a href="?video_id=<%= item[:video_id] %>" target="_blank" rel="noopener noreferrer">
+                <%= (item[:title]||"No title") %>
+              </a>
+            </td>
+          </tr>
+        <% } %>
+
+      </tbody>
+    </table>
+  </body>
+</html>
