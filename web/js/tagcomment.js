@@ -11,6 +11,6 @@ function copypaste() {
   let url = new URL(location.href);
   let video_id = url.searchParams.get("video_id");
   let yt = `https://youtube.com/watch?v=${video_id}`;
-  //window.open(yt, '_blank').focus();
-  //window.location.assign(yt);
+  window.open(yt, '_blank').focus();
+  //window.location.assign(yt); // for mobile?
 }
