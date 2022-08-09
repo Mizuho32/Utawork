@@ -90,7 +90,8 @@ class App < Sinatra::Base
 
       erb :tagcomment, locals: {
         tags: tags.select{|st,en,name,artist| !name.empty? && !artist.empty?},
-        current: current, prev: prev, nxt: nxt
+        current: current, prev: prev, nxt: nxt,
+        sheet_link: App.option[:sheet_link],
       }
     end
   end

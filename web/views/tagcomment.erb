@@ -15,9 +15,11 @@
       </a>
     </h1>
 
-    <pre><code><%= tags.map{|st,en,name,artist|
-                  "#{st} - #{en} #{name.strip} / #{artist.strip}"
-            }.join("\n") %></code></pre>
+    <pre><code><%=
+      tags.map{|st,en,name,artist|
+        "#{st} - #{en} #{name.strip} / #{artist.strip}"
+      }.join("\n") + if sheet_link then "\n\nhttps://docs.google.com/spreadsheets/d/#{sheet_link}" else "" end
+    %></code></pre>
     <button onclick="copypaste()">Copy&#38;Paste</button>
     <div>
     <% if prev then %>
