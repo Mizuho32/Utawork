@@ -22,3 +22,8 @@ APP_ENV=development bundle exec ruby test/server.rb
 ```bash
 bundle exec ruby ruby/export.rb data/ y gsheet_gen/data/UCopMhlXMdVAQOWQhDCdqQmw/
 ```
+
+## get videos in a list
+```bash
+bundle exec ./bin/get_list.rb data/list.yaml (cat /path/to/apikey.txt) "play_list_id"
+```
