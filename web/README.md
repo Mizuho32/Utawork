@@ -13,6 +13,12 @@ https://redmine.lighttpd.net/boards/2/topics/9812
 APP_ENV=production bundle exec ruby server.rb -l data/list.yaml
 
 ```
+
+For tag comments
+```bash
+APP_ENV=production bundle exec ruby server.rb -l data/list.yaml --lc data/comments/data.yaml -s "google sheet id and gid"
+```
+
 ## Develop
 ```bash
 APP_ENV=development bundle exec ruby test/server.rb
