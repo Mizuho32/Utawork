@@ -75,14 +75,16 @@ class App < Sinatra::Base
   end
 
   get '/tagcommenting' do
+
+    @tagcom_list = App.list.values.select{|item| item[:has_tags] } if not defined? @tagcom_list
+
     if params.empty? then
       erb :comment_list, locals: {
-        list: App.list.values
-          .select{|item| item[:has_tags] }
+        list: @tagcom_list
       }
     else
       vid = params["video_id"]
-      list = App.list.values
+      list = @tagcom_list
       tags = Utils.load_tags(vid)
       idx  = list.each_with_index.select{|el, i| el[:video_id] == vid}.first.last
       current = list[idx]
