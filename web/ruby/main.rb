@@ -76,7 +76,21 @@ class App < Sinatra::Base
 
   get '/tagcommenting' do
 
-    @tagcom_list = App.list.values.select{|item| item[:has_tags] } if not defined? @tagcom_list
+    @tagcom_list =
+    if not defined? @tagcom_list then
+
+      list =
+      if App.option[:list_with_comments] then
+        Utils.load_list(App.option[:list_with_comments])
+          .select{|k, v| not v[:comments].join.include?(App.option[:sheet_link]) }
+          .map{|k, v| App.list[v[:video_id].to_sym]}
+          .compact
+      else
+        App.list.values
+      end
+
+      list.select{|item| item[:has_tags] }
+    end
 
     if params.empty? then
       erb :comment_list, locals: {
