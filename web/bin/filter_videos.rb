@@ -6,8 +6,9 @@ require 'date'
 require_relative '../ruby/yt_utils'
 
 
-# ARGV: list.yaml  apikey  listid  update_comment_range
-# update_comment_range: 0 is latest one in list.yaml (e.g. 0..-1)
+# ARGV: list.yaml  apikey  listid  update_comment_range  list2.yaml
+# 3: update_comment_range: 0 is latest one in list.yaml (e.g. 0..-1), optional
+# 4: list2.yaml: print list with tag info [yet impl]
 
 
 listyaml = Pathname(ARGV.first)
@@ -32,11 +33,32 @@ File.write(listyaml, total_list.to_yaml)
 if ARGV[3] then
   update_comment_range = eval(ARGV[3])
 
-  total_list[update_comment_range].map{|video|
-    puts "Process #{video[:title]}"
-    video[:comments] = YTUtils.get_comments(tube, video[:video_id])
-    video
-  }
+  if update_comment_range.is_a? Range then
+    total_list[update_comment_range].map!{|video|
+      print "Process #{video[:title]}"
+
+      video[:comments] = YTUtils.get_comments(tube, video[:video_id]) if !video[:comments]
+      video[:description] = YTUtils.get_video_details(tube, video[:video_id], part: "id,snippet")
+        .first.snippet.description if !video[:description]
+
+      puts "  Done."
+      video
+    }
+    File.write(listyaml, total_list.to_yaml)
+  end
 end
 
-File.write(listyaml, total_list.to_yaml)
+
+#if ARGV[4] then
+#  total_list = Hash[ total_list.map{|item| [item[:video_id].to_sym, item]} ]
+#
+#  require_relative '../ruby/utils'
+#  puts Utils.load_list(ARGV[4])
+#    .select{|k, v| not v[:comments].join.include?("sheet") }
+#    .map{|k, v| total_list[v[:video_id].to_sym]}
+#    .compact
+#    .select{|item| item[:has_tags] }
+#    .map{|item| [item[:title],item[:video_id]] }
+#    .map(&:to_csv)
+#    .join
+#end
