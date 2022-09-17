@@ -90,8 +90,8 @@ module Utils
     ex.backtrace.select{|line| not line.include?("bundle")}
   end
 
-  def load_list(path)
-    list = YAML.unsafe_load_file(path).inject({}){|hash, el|
+  def load_list(path, list = nil)
+    list = (list || YAML.unsafe_load_file(path)).inject({}){|hash, el|
       hash[el[:video_id].to_sym] = el
       hash
     }
