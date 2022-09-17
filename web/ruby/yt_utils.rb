@@ -32,7 +32,7 @@ extend self
       }.take_while{|(title, video_id)|
         not (title_reg =~ title or video_id_reg =~ video_id)
       }.each{|(title, video_id)|
-        next if title == "Private video"
+        next if title == "Private video" || title == "Deleted video"
         puts title
         detail = get_video_details(tube, video_id).first
         videos << {title: title, video_id: video_id, published_at: detail.snippet.published_at.new_offset(Time.now.getlocal.zone), duration: detail.content_details.duration} if not detail.nil?
