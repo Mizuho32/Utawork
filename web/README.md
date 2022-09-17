@@ -33,3 +33,7 @@ bundle exec ruby ruby/export.rb data/ y gsheet_gen/data/UCopMhlXMdVAQOWQhDCdqQmw
 ```bash
 bundle exec ./bin/get_list.rb data/list.yaml (cat /path/to/apikey.txt) "play_list_id"
 ```
+
+## get videos with comments and description
+```bash
+bundle exec bin/filter_videos.rb data/comments/data.yaml (cat /path/to/apikey.txt) "play_list_id" "0..20"
