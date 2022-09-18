@@ -165,11 +165,17 @@ function load_segments(txt) {
     .split("\n")
     .forEach((row,i)=>{
 
-      let times = row.split(/\s+/).map(n=>parseInt(n));
-      if (times.length == 2) {
-        let new_row = insert_row(table, i, ...times);
-        apply_tablerow_shortcuts(new_row);
-      }
+      const num_reg = /(\d|\.)+/g;
+      let times = [...row.matchAll(num_reg)].map(m=>parseInt(m[0]));
+      let others = row.split(/(?<![a-z])\s+(?![a-z])/i)
+        .map(el=>el.trim())
+        .filter(el=>el && !el.match(num_reg));
+
+      if (times.length == 1)
+        times.push(times[0] + 3*60.0);
+
+      let new_row = insert_row(table, i, ...times.slice(0, 2), others[0]||"", others[1]||"");
+      apply_tablerow_shortcuts(new_row);
 
     });
 }
