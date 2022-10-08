@@ -219,6 +219,7 @@ function upload_tags(e) {
 
   let table = document.querySelector("#stamps");
   let ar = Array.from(table.rows)
+    .filter(row => row.querySelector("input.name"))
     .map(row => {
       let name = row.querySelector("input.name").value;
       let artist = row.querySelector("input.artist").value;
@@ -267,6 +268,7 @@ function upload_tags(e) {
 function show_output(e) {
   let table = document.querySelector("#stamps");
   let text = Array.from(table.rows)
+    .filter(row => row.querySelector("input.name"))
     .map(row => {
       let name = row.querySelector("input.name").value;
       let artist = row.querySelector("input.artist").value;
