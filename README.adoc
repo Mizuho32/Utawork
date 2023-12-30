@@ -14,3 +14,10 @@ $ wget "https://www.dropbox.com/s/ca0b1v2nlxzyeb4/audioset_10_10_0.4593.pth?dl=1
 
 == Usage
 See `notebooks/Recog.ipynb`.
+
+Failed to load model class 'MPLCanvasModel' from module 'jupyter-matplotlib'
+https://github.com/matplotlib/ipympl/issues/460#issuecomment-1419304152
+Stop kernel
+jupyter lab build (in same terminal)
+Restart kernel
+Hard refresh the lab page
