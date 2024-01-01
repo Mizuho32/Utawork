@@ -1,10 +1,24 @@
 import json
 import re, sys
-import numpy as np
 from itertools import groupby
 import scipy.signal as sps
 import time
+import pathlib
+from typing import List, Dict, Tuple
+
+import numpy as np
+import pickle
 from logging import getLogger, Formatter, StreamHandler, FileHandler, DEBUG, INFO, Logger
+
+
+def load_pickle(path: pathlib.Path):
+    with open(path, "rb") as h:
+        data = pickle.load(h)
+    return data
+
+def save_text(path: pathlib.Path, text: str):
+    with open(path, "w") as h:
+        h.write(text)
 
 # https://qiita.com/FukuharaYohei/items/92795107032c8c0bfd19
 def get_module_logger(module, log_dir, verbose=True, console_print=True):
@@ -203,6 +217,33 @@ class Ontology:
                 abst_score_map[abst_id] += score
 
         return abst_score_map
+
+    def absts_conc_indices(self, interests: List[dict], audioset) -> Dict[str, List[int]]:
+        conc_ids = [audioset.ids[idx] for idx in range(527)]
+        abst_concidx_map = {}
+
+        for cls in conc_ids:
+            #print(cls, score)
+            abst_cls = self.get_abst(cls, interests)
+            abst_id = abst_cls["id"]
+
+            try:
+                cls_index = audioset.id_index[cls] # index in infer out tensor
+
+                if not abst_id in abst_concidx_map.keys():
+                    abst_concidx_map[abst_id] = [cls_index]
+
+                    abst_index = audioset.id_index[abst_id]
+                    abst_concidx_map[abst_id].append(abst_index)
+                else:
+                    abst_concidx_map[abst_id].append(cls_index)
+            except KeyError:
+                pass
+
+        return abst_concidx_map
+
+
+
 
 
 
