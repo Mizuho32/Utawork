@@ -28,7 +28,7 @@ class Chunk:
         self.intervals = intervals
 
 class Threshold:
-    def __init__(self, thres: float, human_thres: float, music_joint_thres: float, human_joint_thres: float, adj_thres: float, long_thres: float, hs_rate_thres: float):
+    def __init__(self, thres: float, human_thres: float, music_joint_thres: float, human_joint_thres: float, adj_thres: float, long_thres: float, hs_rate_thres: float, transc_long_thres: float, search_len: int):
         self.thres = thres
         self.human_thres = human_thres
         self.music_joint_thres = music_joint_thres
@@ -37,13 +37,16 @@ class Threshold:
         self.adj_thres = adj_thres
         self.long_thres = long_thres
         self.hs_rate_thres = hs_rate_thres
-        
+
+        self.transc_long_thres = transc_long_thres
+        self.search_len = search_len
 
 class Config:
-    def __init__(self, input_path: pathlib.Path,  cut_duration: float, thres_set: Threshold, interests: List[dict], cache_interval: int, model_sr:int =32000):
+    def __init__(self, input_path: pathlib.Path,  cut_duration: float, thres_set: Threshold, interests: List[dict], cache_interval: int, print_interval: int, model_sr:int =32000):
         self.input_path = input_path
         self.cache_dir = input_path.parent / "infer_cache"
         self.cache_interval = cache_interval
+        self.print_interval = print_interval
 
         self.interests = interests
         self.cut_duration = cut_duration
@@ -74,6 +77,14 @@ class Detector:
         with open(self.cache_dir / f"{index}.pkl", "wb") as h:
             pickle.dump(cache, h)
 
+    # interval: min
+    def progress(self, idx: int):
+        config = self.config
+        interval_idx = int(config.print_interval * 60 / config.cut_duration)
+
+        if idx % interval_idx == 0:
+            print(f"At {utils.sec2time(idx*config.cut_duration)}")
+
     def main(self, start_offset: float) -> np.ndarray:
         self.prepare()
 
@@ -84,6 +95,8 @@ class Detector:
         num_abst_cls = len(self.classifier.abst_concidx.keys())
 
         while True:
+            self.progress(idx)
+
             cache_offset = offset
             cache_idx = idx
             cache_duration = 0
@@ -100,10 +113,11 @@ class Detector:
                     break
 
                 output_dict = self.classifier.infer(waveform)
-                abst_tensor = self.classifier.abst_tensor(output_dict["framewise_output"].cpu()[0], config.interests, self.ontology, self.audioset)
+                abst_tensor = self.classifier.abst_tensor(output_dict["framewise_output"].cpu()[0])
                 cache_abst_tensors.append(abst_tensor)
 
-                tmp = AudioClassifier.music_intervals(abst_tensor, offset, config.cut_duration, config.thres_set.thres)
+                #tmp = AudioClassifier.music_intervals(abst_tensor, offset, config.cut_duration, config.thres_set.thres)
+                tmp = self.abst_tensor2intervals(abst_tensor, offset, config.cut_duration)
                 if len(tmp):
                     cache_music_intervals.append(tmp)
 
@@ -115,8 +129,6 @@ class Detector:
             if type(waveform) is type(None):
                 break
 
-            #print([itvs.shape for itvs in cache_music_intervals])
-            #print([itvs.shape for itvs in cache_abst_tensors])
             tmp = np.vstack(cache_music_intervals)
             music_intervals.append(tmp)
             self.do_cache(cache_idx, cache_offset, cache_duration, torch.vstack(cache_abst_tensors), tmp)
@@ -127,8 +139,8 @@ class Detector:
     def get_cache(self, time: float, duration: float, config: Config) -> Tuple[float, float, torch.Tensor, np.ndarray]: # time fixed, duration fixed, abst tensor, intervals
         cache_dir = config.cache_dir
 
-        start_idx = time // config.cut_duration
-        n = (time+duration) // config.cut_duration - start_idx
+        start_idx = int(time // config.cut_duration)
+        n = int((time+duration) // config.cut_duration) - start_idx
 
         # 9 = (11//3)*3
         indices = list(set([ (idx//config.cache_interval)*config.cache_interval for idx in range(start_idx, start_idx+n+1)]))
@@ -184,7 +196,7 @@ class Detector:
 
         return torch.vstack(all_abst_tensors), 0, duration
 
-    def abst_tensor2intervals(self, abst_tensor, start_time, duration):
+    def abst_tensor2intervals(self, abst_tensor: torch.Tensor, start_time: float, duration: float):
         config = self.config
         thres_set = config.thres_set
         filter = lambda t: wise_filter(t, thres_set.thres, (thres_set.music_joint_thres, thres_set.human_joint_thres))
@@ -196,6 +208,7 @@ class Detector:
         
     
 # adj_thres: inc sec
+# From both music and human intervals to music interval
 def precise_music_intervals(music_intervals: np.ndarray, human_speech_intervals: np.ndarray, adj_thres: float, long_thres: float, hs_rate_thres: float) -> np.ndarray:
 
     final_music_intervals: List[np.ndarray] = [np.empty((0,2))]
