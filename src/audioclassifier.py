@@ -71,7 +71,7 @@ class AudioClassifier:
         indices = list(indices) + [None]
 
         start = indices[0]
-        itvs = []
+        itvs = [np.empty((0, 2))]
 
         if start == None:
             idx_len = 0
@@ -86,7 +86,7 @@ class AudioClassifier:
                 itvs.append( to_time(start, pre+1) )
                 start = nxt
 
-        return np.array(itvs)
+        return np.vstack(itvs)
 
 
 
