@@ -97,7 +97,12 @@ class Transcriber:
         lang = ""
         for idx, (start, end) in enumerate(utils.each_cons(steps, 2)):
 
-            audio, _ = librosa.load(self.config.input_path, sr=self.model_sr, offset = start, duration=end-start)
+            try:
+                audio, _ = librosa.load(self.config.input_path, sr=self.model_sr, offset = start, duration=end-start)
+            except ValueError as ex:
+                print("librosa.load:", ex)
+                continue
+
             audio = whisper.pad_or_trim(audio)
 
             # make log-Mel spectrogram and move to the same device as the model
