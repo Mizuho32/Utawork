@@ -5,13 +5,14 @@ import urllib.parse
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 import requests
+import pickle
 
 from py_linq import Enumerable as E
 import google.generativeai as genai
 
 from .detector import Config
 from .transcriber import Transcription
-import utils
+from . import utils
 
 #from matplotlib.axes import Axes
 
