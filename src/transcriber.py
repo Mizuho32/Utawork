@@ -45,7 +45,8 @@ class Transcriber:
         self.model_sr = model_sr
         self.config = config
 
-        self.transcribe_dir = self.config.input_path.parent / "transcribe"
+        self.transcribe_dir = self.config.transcript_cache_dir / config.input_path.stem
+        self.prepare()
 
     def prepare(self,):
         if not self.transcribe_dir.exists():
@@ -64,7 +65,6 @@ class Transcriber:
             print(f"At {utils.sec2time(idx*config.cut_duration)}")
 
     def main(self) -> List[Transcription]:
-        self.prepare()
 
         config = self.config
         music_intervals: np.ndarray = np.loadtxt(config.input_path.parent / f"{config.input_path.stem}.txt", dtype=float, delimiter="\t")

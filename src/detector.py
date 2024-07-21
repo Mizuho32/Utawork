@@ -45,11 +45,13 @@ class Config:
     def __init__(self, input_path: pathlib.Path,  cut_duration: float, thres_set: Threshold, interests: List[dict], cache_interval: int, print_interval: int, model_sr:int =32000):
         self.input_path = input_path
         self.cache_dir = input_path.parent / "infer_cache"
+        self.transcript_cache_dir = input_path.parent / "transcribe"
+        self.output_dir  = input_path.parent / "identified"
         self.cache_interval = cache_interval
         self.print_interval = print_interval
 
         self.interests = interests
-        self.cut_duration = cut_duration
+        self.cut_duration = cut_duration # get cut_duration [sec] sounds from sound file
         self.thres_set = thres_set
 
         self.model_sr = model_sr
@@ -64,9 +66,10 @@ class Detector:
         self.audioset = audioset
 
         self.config = config
+        self.prepare()
 
     def prepare(self,):
-        self.cache_dir = self.config.cache_dir
+        self.cache_dir = self.config.cache_dir / self.config.input_path.stem
 
         if not self.cache_dir.exists():
             self.cache_dir.mkdir()
@@ -86,8 +89,6 @@ class Detector:
             print(f"At {utils.sec2time(idx*config.cut_duration)}")
 
     def main(self, start_offset: float) -> np.ndarray:
-        self.prepare()
-
         config = self.config
         offset = start_offset
         idx = 0
@@ -184,7 +185,7 @@ class Detector:
         return start_time, end_time-start_time, abst_tensor[start_delta_step:(end_step+1), :], mi[ (mi[:, 0] >= start_time) & (mi[:, 0] <= end_time)]
     
     def concat_cached_abst(self) -> Tuple[torch.Tensor, float, float]:
-        cache_paths: List[pathlib.Path] = sorted(E(glob.glob(f"{self.config.cache_dir}/*.pkl")).select(lambda path: pathlib.Path(path)), key=lambda path: int(path.stem))
+        cache_paths: List[pathlib.Path] = sorted(E(glob.glob(f"{self.cache_dir}/*.pkl")).select(lambda path: pathlib.Path(path)), key=lambda path: int(path.stem))
         num_abst_cls = len(self.classifier.abst_concidx.keys())
         all_abst_tensors: List[torch.Tensor] = [torch.empty((0, num_abst_cls))]
         duration = 0
