@@ -42,6 +42,17 @@ def get_items(tag: Tag) -> List[str]:
 
     return [div.text for div in result_divs]
 
+def find_min_repetition(s):
+    # 正規表現を使用して繰り返しパターンを検出
+    pattern = re.compile(r"(.+?)\1+")
+    match = pattern.search(s)
+
+    if match:
+        repetition = match.group(1)
+        return repetition, match
+    else:
+        return s, match
+
 class Identifier:
 
     def __init__(self, transcriptions: List[Transcription], model: genai.GenerativeModel, config: Config, prompt: str=""):
@@ -62,8 +73,37 @@ Guess the artist and the song name and return in json format include "artist" an
             self.output_dir.mkdir()
 
     def do_cache(self, transcribes: List[Transcription]):
-        with open(self.output_dir / f"{self.config.input_path.stem}.pkl", "wb") as h:
-            pickle.dump(transcribes, h)
+        finished = False
+        while not finished:
+            try:
+                with open(self.output_dir / f"{self.config.input_path.stem}.pkl", "wb") as h:
+                    pickle.dump(transcribes, h)
+                finished = True
+            except pickle.PicklingError:
+                transcribes = [Transcription.Renew(t) for t in transcribes]
+
+
+    def get_search_word(self, transcription: Transcription):
+
+        text = transcription.text
+
+        while True:
+            total_len = len(text)
+            idx = total_len // 2
+            search_word = text[idx:(idx+self.config.thres_set.search_len)]
+
+            min_rep, match = find_min_repetition(search_word)
+
+            if match is None:
+                break
+            else:
+                start, end = match.span()
+                if end - start < total_len/4: # FIXME: fixed value?
+                    break
+
+            text = text[:start] + min_rep + text[end:]
+
+        return search_word
 
     def guess_song(self, transcription: Transcription):
 
