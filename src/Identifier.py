@@ -60,9 +60,12 @@ class Identifier:
         self.config = config
         self.transcriptions = transcriptions
 
-        self.output_dir = self.config.input_path.parent / "identified"
+        self.output_dir = self.config.output_dir / self.config.input_path.stem
+        self.prepare()
+
         self.prompt = """
-Guess the artist and the song name and return in json format include "artist" and "title" as keys.
+Guess the artist and the song name in human understandable Japanese as possible as you can from the list and return it in json format include "artist" and "title" as keys.
+If you can't identify them uniquely, the use top item of list that include the word "歌詞".
 
 {}
 """ if not prompt else prompt
@@ -106,6 +109,7 @@ Guess the artist and the song name and return in json format include "artist" an
         return search_word
 
     def guess_song(self, transcription: Transcription):
+        self.cache_hit = False
 
         segment = transcription.segment
         if segment[1] - segment[0] < self.config.thres_set.transc_long_thres:
@@ -114,17 +118,16 @@ Guess the artist and the song name and return in json format include "artist" an
         
         # search lyrics
         if not transcription.search_result:
-            text = transcription.text
-            total_len = len(text)
-            idx = total_len // 2
-            search_word = text[idx:(idx+self.config.thres_set.search_len)]
-
+            search_word = self.get_search_word(transcription)
             tags = google(search_word)
             items = get_items(tags)
+
             transcription.search_word = search_word
             transcription.search_result = items
+
         else:
             items = transcription.search_result
+            self.cache_hit = True
         
 
         prompt = self.prompt.format(str.join("\n", items))
@@ -134,14 +137,16 @@ Guess the artist and the song name and return in json format include "artist" an
             response = self.model.generate_content(prompt)
             llm_result = response.parts[0].text
             transcription.llm_result = llm_result
+
         else:
             llm_result = transcription.llm_result
+            self.cache_hit = True
         
 
         try:
             json_data = json.loads(re.search(r"\A```(?:json)?(.*)```\Z", llm_result, re.MULTILINE | re.DOTALL)[1])
         except (json.JSONDecodeError, TypeError) as e:
-            print(f"JSON decoding error: {e}")
+            #print(f"JSON decoding error: {e}")
             json_data = {}
 
         if json_data:
@@ -154,13 +159,13 @@ Guess the artist and the song name and return in json format include "artist" an
         return transcription
 
     def main(self) -> List[Transcription]:
-        self.prepare()
 
         for idx, transcription in enumerate(self.transcriptions):
             self.guess_song(transcription)
 
             print(f"Guessed {idx}: {transcription.title}/{transcription.artist}")
-            time.sleep(5)
+            if not self.cache_hit:
+                time.sleep(5)
 
 
         self.do_cache(self.transcriptions)
