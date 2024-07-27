@@ -135,9 +135,10 @@ If you can't identify them uniquely, the use top item of list that include the w
         # guess song from search result
         if not transcription.llm_result:
             response = self.model.generate_content(prompt)
-            llm_result = response.parts[0].text
-            transcription.llm_result = llm_result
-
+            llm_result = ""
+            if len(response.parts):
+                llm_result = response.parts[0].text
+                transcription.llm_result = llm_result
         else:
             llm_result = transcription.llm_result
             self.cache_hit = True
