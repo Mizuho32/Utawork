@@ -67,7 +67,9 @@ class Transcriber:
     def main(self) -> List[Transcription]:
 
         config = self.config
-        music_intervals: np.ndarray = np.loadtxt(config.input_path.parent / f"{config.input_path.stem}.txt", dtype=float, delimiter="\t")
+        music_intervals: np.ndarray = np.vstack([
+            np.empty((0, 2)),
+            np.loadtxt(config.input_path.parent / f"{config.input_path.stem}.txt", dtype=float, delimiter="\t")])
         transcriptions: List[Transcription] = []
 
         try:
