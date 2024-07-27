@@ -14,6 +14,7 @@ import yaml
 import pickle
 
 from . import utils
+from matplotlib.axes import Axes
 
 
 class Recog:
@@ -109,7 +110,7 @@ class Recog:
             return cb
 
     @classmethod
-    def classifyshow(cls, ontology, abst_scores_series, xstep=1, ax=None, title="", w=16, h=4):
+    def classifyshow(cls, ontology: utils.Ontology, abst_scores_series, xstep=1, ax: Axes = None, title=""):
         # https://www.wizard-notes.com/entry/music-analysis/timelinechart-with-matplotlib
 
         itvs = {}
@@ -143,6 +144,29 @@ class Recog:
         ax.xaxis.set_ticks(np.arange(start, end, xstep))
 
         ax.set_yticks(np.arange(0, len(labels))+0.5)
+        ax.set_yticklabels(labels)
+
+    @classmethod
+    def classify_show(cls, interests, audioset, ontology: utils.Ontology, result: torch.Tensor, xstep=1, ax: Axes = None, title=""):
+        abst_concidx = ontology.absts_conc_indices(interests, audioset)
+
+        # reduce by max
+        abst_tensor = []
+        for abst_id in sorted(abst_concidx.keys(), key=lambda i: ontology.to_name(i)):
+            conc_idxs = abst_concidx[abst_id]
+            abst_tensor.append(result[:, conc_idxs].max(dim=1).values)
+
+        abst_tensor = torch.vstack(abst_tensor).transpose(1,0)
+
+        ax.imshow(abst_tensor.transpose(0,1).cpu(), cmap='viridis', interpolation='nearest', aspect="auto")
+        ax.set_title(title)
+
+        #ax.set_xlabel('Time')
+        #start, end = ax.get_xlim()
+        #ax.xaxis.set_ticks(np.arange(start, end, xstep))
+
+        labels = list(sorted(map(lambda i: ontology.to_name(i)[:7], abst_concidx.keys())))
+        ax.set_yticks(np.arange(0, len(labels))+0.5*0)
         ax.set_yticklabels(labels)
 
     @classmethod
