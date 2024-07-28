@@ -8,4 +8,8 @@ class Song < Hash
     self[:end_time] = end_time
   end
 
+  def to_hash()
+    return {**self}
+  end
+
 end
