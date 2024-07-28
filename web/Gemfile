@@ -14,4 +14,7 @@ group :develop do
   gem 'test-unit'
   #gem "faye-websocket"
   gem 'websocket-client-simple'
+  gem "rake"
+  gem "ffi-rzmq"
+  gem "iruby"
 end
