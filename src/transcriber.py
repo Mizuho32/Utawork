@@ -50,7 +50,7 @@ class Transcriber:
 
     def prepare(self,):
         if not self.transcribe_dir.exists():
-            self.transcribe_dir.mkdir()
+            self.transcribe_dir.mkdir(parents=True)
 
     def do_cache(self, transcribes: List[Transcription]):
         with open(self.transcribe_dir / f"{self.config.input_path.stem}.pkl", "wb") as h:

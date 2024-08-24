@@ -72,7 +72,7 @@ class Detector:
         self.cache_dir = self.config.cache_dir / self.config.input_path.stem
 
         if not self.cache_dir.exists():
-            self.cache_dir.mkdir()
+            self.cache_dir.mkdir(parents=True)
 
     def do_cache(self, index, offset, duration, abst_tensor, music_intervals):
         cache = InferCache(index, offset, duration, abst_tensor, music_intervals)
