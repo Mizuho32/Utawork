@@ -3,7 +3,7 @@ import numpy as np
 import librosa
 from zsass.models.htsat import HTSAT_Swin_Transformer
 
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, List, Optional, Tuple, Callable
 from . import utils, audioset
 
 class AudioClassifier:
@@ -56,7 +56,7 @@ class AudioClassifier:
         return torch.vstack(abst_tensor).transpose(1, 0)[::simplifi_interval, :]
     
     @classmethod # -> [ [start, end], ...]
-    def music_intervals(cls, abst_tensor: torch.Tensor, offset: float, duration: float, thres: float, predicate: Callable[[torch.Tensor], torch.Tensor] = None, target_index=3) -> np.ndarray:
+    def music_intervals(cls, abst_tensor: torch.Tensor, offset: float, duration: float, thres: Optional[float], predicate: Callable[[torch.Tensor], torch.Tensor] = None, target_index=3) -> np.ndarray:
         resolution, _ = abst_tensor.shape
         def to_time(start, end):
             return np.array([start.numpy(), end])/resolution*duration + offset

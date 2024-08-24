@@ -113,14 +113,14 @@ class Transcriber:
             if idx == 0:
                 # detect the spoken language
                 _, probs = self.model.detect_language(mel)
-                lang = max(probs, key=probs.get)
+                lang: str = max(probs, key=probs.get) # type: ignore
                 print(f"Detected language: {lang}")
 
             # decode the audio
             options = whisper.DecodingOptions()
             result = whisper.decode(self.model, mel, options)
 
-            text += result.text
+            text += result.text # type: ignore
 
         return Transcription(segment, text, lang)
 

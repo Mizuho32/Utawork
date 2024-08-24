@@ -1,11 +1,12 @@
 import pathlib, glob
 import pickle
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Annotated, Literal, TypeVar, Union
 from enum import Flag, auto
 
 import librosa
 import torch
 import numpy as np
+import numpy.typing as npt
 from py_linq import Enumerable as E
 
 from .audioclassifier import AudioClassifier
@@ -13,6 +14,11 @@ from . import utils, audioset
 from .infer_cache import InferCache
 
 #from matplotlib.axes import Axes
+
+# Numpy arrays
+DType = TypeVar("DType", bound=np.generic)
+MatNx2 = Annotated[npt.NDArray[DType], Literal["N", 2]]
+Vec2 = Annotated[npt.NDArray[DType], Literal[2]]
 
 class Label(Flag):
     Music = auto()
@@ -186,7 +192,7 @@ class Detector:
         return start_time, end_time-start_time, abst_tensor[start_delta_step:(end_step+1), :], mi[ (mi[:, 0] >= start_time) & (mi[:, 0] <= end_time)]
     
     def concat_cached_abst(self) -> Tuple[torch.Tensor, float, float]:
-        cache_paths: List[pathlib.Path] = sorted(E(glob.glob(f"{self.cache_dir}/*.pkl")).select(lambda path: pathlib.Path(path)), key=lambda path: int(path.stem))
+        cache_paths: List[pathlib.Path] = sorted(E(glob.glob(f"{self.cache_dir}/*.pkl")).select(lambda path: pathlib.Path(path)), key=lambda path: int(path.stem)) # type: ignore
         num_abst_cls = len(self.classifier.abst_concidx.keys())
         all_abst_tensors: List[torch.Tensor] = [torch.empty((0, num_abst_cls))]
         duration = 0
@@ -211,15 +217,17 @@ class Detector:
     
 # adj_thres: inc sec
 # From both music and human intervals to music interval
-def precise_music_intervals(music_intervals: np.ndarray, human_speech_intervals: np.ndarray, adj_thres: float, long_thres: float, hs_rate_thres: float) -> np.ndarray:
+def precise_music_intervals(music_intervals: MatNx2[np.float64], human_speech_intervals: np.ndarray, adj_thres: float, long_thres: float, hs_rate_thres: float) -> np.ndarray:
 
-    final_music_intervals: List[np.ndarray] = [np.empty((0,2))]
+    final_music_intervals: List[Union[List[float], Vec2[np.float64]]] = [np.empty((0,2))]
     music_intervals2 = np.vstack([music_intervals, np.array([-1, -1])])
 
     hs_idx = 0
 
     if len(music_intervals):
 
+        start_time:float
+        end_time: float
         start_time, end_time = music_intervals[0]
         for idx in range(music_intervals.shape[0]):
             pre, nxt = music_intervals2[idx], music_intervals2[idx+1]
