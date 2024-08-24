@@ -1,14 +1,17 @@
+import csv
 import pathlib, glob, re, json
 import pickle, time
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Union
 import urllib.parse
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from bs4.element import Tag
 import requests
 import pickle
 
 from py_linq import Enumerable as E
 import google.generativeai as genai
+from browser_cookie3 import http
+import numpy as np
 
 from .detector import Config
 from .transcriber import Transcription
@@ -16,24 +19,49 @@ from . import utils
 
 #from matplotlib.axes import Axes
 
+search_engines = {
+    "google": {
+        "url": "https://www.google.co.jp/search?hl=jp&gl=JP&",
+        "query": "q",
+        "container": ["div", {"id": "main"}]
+    },
+    "bing": {
+        "url": "https://www.bing.com/search?",
+        "query": "q",
+        "container": ["ol", {"id": "b_results"}]
+    }
+}
 
-def google(word: str) -> Tag:
-    user_agent = "(｀・ω・´)"  # not to load images(?)
-
-    search_url = "https://www.google.co.jp/search?hl=jp&gl=JP&"
-    query = urllib.parse.urlencode({'q': word})
+def search(word: str, engine: str, cookie_jar = None) -> Union[Tag, NavigableString, None]:
+    search_engine = search_engines[engine]
+    search_url = search_engine["url"]
+    query_key: str = search_engine["query"]
+    query = urllib.parse.urlencode({query_key: word})
     search_url += query
 
-    headers = {'User-Agent': user_agent.encode()}
-    response = requests.get(search_url, headers=headers)
-    response.raise_for_status()
+    if not cookie_jar:
+        user_agent = "(｀・ω・´)"  # not to load images(?)
+        headers = {'User-Agent': user_agent.encode()}
+        response = requests.get(search_url, headers=headers)
+    else:
+        #Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0
+        # User-Agentを設定
+        session = requests.Session()
+        session.headers.update({
+            #'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+            'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0"
+        })
+        session.cookies.update(cookie_jar)
 
+        # リクエストを送信
+        response = session.get(search_url)
+
+    response.raise_for_status()
     html = response.text#content.decode('utf-8')
     soup = BeautifulSoup(html, 'html.parser')
-    return soup.find('div', {'id': 'main'})
-#.prettify()
+    return soup.find(*search_engine["container"])#.prettify()
 
-def get_items(tag: Tag) -> List[str]:
+def get_items_google(tag: Tag) -> List[str]:
     child_divs = tag.find_all('div', recursive=False)
 
     result_divs = [child_div for child_div in child_divs if child_div.find('h3')]
@@ -41,6 +69,16 @@ def get_items(tag: Tag) -> List[str]:
     result_divs = [div for div in result_divs if not div.find("span")]
 
     return [div.text for div in result_divs]
+
+def get_items_bing(tag: Tag) -> List[str]:
+    # b_algo
+    child_lis = tag.find_all('li', recursive=False)
+
+    result_lis = [child_li for child_li in child_lis if child_li.find('h2')]
+    result_lis = [li.find("h2").find("a") for li in result_lis]
+    #result_lis = [a for a in result_lis if not a.find("span")]
+
+    return [a.text for a in result_lis if a]
 
 def find_min_repetition(s):
     # 正規表現を使用して繰り返しパターンを検出
@@ -55,7 +93,8 @@ def find_min_repetition(s):
 
 class Identifier:
 
-    def __init__(self, transcriptions: List[Transcription], model: genai.GenerativeModel, config: Config, prompt: str=""):
+    def __init__(self, engine_type: str, transcriptions: List[Transcription], model: genai.GenerativeModel, config: Config, prompt: str="", cookie_jar: http.cookiejar.CookieJar = None):
+        self.engine_type = engine_type
         self.model = model
         self.config = config
         self.transcriptions = transcriptions
@@ -69,11 +108,12 @@ If you can't identify them uniquely, the use top item of list that include the w
 
 {}
 """ if not prompt else prompt
+        self.cookie_jar = cookie_jar
 
 
     def prepare(self,):
         if not self.output_dir.exists():
-            self.output_dir.mkdir()
+            self.output_dir.mkdir(parents=True)
 
     def do_cache(self, transcribes: List[Transcription]):
         finished = False
@@ -119,8 +159,8 @@ If you can't identify them uniquely, the use top item of list that include the w
         # search lyrics
         if not transcription.search_result:
             search_word = self.get_search_word(transcription)
-            tags = google(search_word)
-            items = get_items(tags)
+            tags = search(search_word, self.engine_type, self.cookie_jar)
+            items = (globals()[f"get_items_{self.engine_type}"])(tags)
 
             transcription.search_word = search_word
             transcription.search_result = items
@@ -159,20 +199,61 @@ If you can't identify them uniquely, the use top item of list that include the w
         
         return transcription
 
-    def main(self) -> List[Transcription]:
+    def main(self, resumed_trsc: List[Transcription] = []) -> List[Transcription]:
 
-        for idx, transcription in enumerate(self.transcriptions):
-            self.guess_song(transcription)
+        resume_mode = not not resumed_trsc
 
-            print(f"Guessed {idx}: {transcription.title}/{transcription.artist}")
-            if not self.cache_hit:
-                time.sleep(5)
+        if resume_mode:
+            self.transcriptions = resumed_trsc
 
+        try:
+            for idx, transcription in enumerate(self.transcriptions):
+                if resume_mode and transcription.title:
+                    print(f"Skip Guess {idx}: {transcription.title}/{transcription.artist}")
+                else:
+                    self.guess_song(transcription)
 
-        self.do_cache(self.transcriptions)
+                    print(f"Guessed {idx}: {transcription.title}/{transcription.artist}")
+                    if not self.cache_hit:
+                        time.sleep(5)
+
+            self.do_cache(self.transcriptions)
+        except Exception as ex:
+            print("Err", ex, "do cache.")
+            self.do_cache(self.transcriptions)
+            raise ex
 
         return self.transcriptions
 
 
     def get_cache(self) -> List[Transcription]:
         return utils.load_pickle(self.output_dir / f"{self.config.input_path.stem}.pkl")
+
+    def save_csv(self, media_dir: pathlib.Path, soundfile: pathlib.Path, identified: List[Transcription], end_expand = 5.0, name_filter = None):
+
+        if name_filter is not None and not name_filter(soundfile):
+            print("Skip csv", soundfile.name)
+            # continue
+            return
+        else:
+            print("Write csv", soundfile.name)
+
+        csv_file = media_dir / "identified" / soundfile.stem / f"{soundfile.stem}.csv"
+        csv_data = []
+
+        transcriptions: List[Transcription] = identified
+
+        for idx, transcription in enumerate(transcriptions):
+            title = transcription.title
+            #print(title, transcription.search_word)
+            if not title:
+                title = "NoName" + str(idx)
+
+            start, end = transcription.segment
+            end += end_expand
+
+            csv_data.append([start, end, title, transcription.artist])
+
+        with open(csv_file, "w", newline="") as file:
+            mywriter = csv.writer(file, delimiter=",")
+            mywriter.writerows(np.array(csv_data))
