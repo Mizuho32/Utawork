@@ -1,7 +1,7 @@
 import csv
 import pathlib, glob, re, json
 import pickle, time
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Optional
 import urllib.parse
 from bs4 import BeautifulSoup, NavigableString
 from bs4.element import Tag
@@ -93,7 +93,7 @@ def find_min_repetition(s):
 
 class Identifier:
 
-    def __init__(self, engine_type: str, transcriptions: List[Transcription], model: genai.GenerativeModel, config: Config, prompt: str="", cookie_jar: http.cookiejar.CookieJar = None):
+    def __init__(self, engine_type: str, transcriptions: List[Transcription], model: genai.GenerativeModel, config: Config, prompt: str="", cookie_jar: Optional[http.cookiejar.CookieJar] = None):
         self.engine_type = engine_type
         self.model = model
         self.config = config
@@ -184,11 +184,13 @@ If you can't identify them uniquely, the use top item of list that include the w
             self.cache_hit = True
         
 
+        json_data = {}
         try:
-            json_data = json.loads(re.search(r"\A```(?:json)?(.*)```\Z", llm_result, re.MULTILINE | re.DOTALL)[1])
+            tmp = re.search(r"\A```(?:json)?(.*)```\Z", llm_result, re.MULTILINE | re.DOTALL)
+            if tmp:
+                json_data = json.loads(tmp[1])
         except (json.JSONDecodeError, TypeError) as e:
-            #print(f"JSON decoding error: {e}")
-            json_data = {}
+            pass
 
         if json_data:
             transcription.artist = json_data["artist"]
