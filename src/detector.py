@@ -162,6 +162,7 @@ class Detector:
 
         end_step = 0
 
+        end_time = start_time = 0.0
         for idx, cache in enumerate(caches):
             if idx == 0:
                 start_cache = cache
